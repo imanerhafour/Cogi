@@ -207,7 +207,7 @@ def register():
             flash("Please fill all fields and complete the CAPTCHA.", "error")
             return redirect(url_for("register"))
 
-        secret_key = "6LedszgrAAAAAE6_89wcyjVmHD_JIYYRa_rccoZa"
+        secret_key = "6LdeuTgrAAAAAHq3joWnVZ18BY62ilrRfUmSkT_d"
         payload = {'secret': secret_key, 'response': recaptcha_response}
         response = requests.post("https://www.google.com/recaptcha/api/siteverify", data=payload)
         result = response.json()
