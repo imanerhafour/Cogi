@@ -245,6 +245,17 @@ def reset_token(token):
 
     return render_template("reset_token.html")
 
+@app.route('/test-mail')
+def test_mail():
+    msg = Message("Test Cogi", sender=app.config['MAIL_USERNAME'], recipients=["tonemail@gmail.com"])
+    msg.body = "Ceci est un test de Flask-Mail"
+    try:
+        mail.send(msg)
+        return "✅ Email envoyé"
+    except Exception as e:
+        return f"❌ Erreur : {str(e)}"
+
+
 @app.route('/chat')
 def chat():
     if "user" not in session:
