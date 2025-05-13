@@ -78,6 +78,15 @@ def send_confirmation_email(email):
     msg.body = f"Bienvenue sur Cogi ! Clique ici pour confirmer ton adresse : {link}"
     mail.send(msg)
 
+def send_reset_email(email):
+    token = s.dumps(email, salt='reset-password')
+    link = url_for('reset_token', token=token, _external=True)
+    msg = Message('🔐 Réinitialisation de ton mot de passe',
+                  sender=app.config['MAIL_USERNAME'],
+                  recipients=[email])
+    msg.body = f'Cogi te permet de réinitialiser ton mot de passe ici : {link}'
+    mail.send(msg)
+
 # CHATBOT
 
 def generate_response(prompt, system_message="You are a bilingual (French/Arabic) psychological assistant. Respond in the user's language."):
@@ -197,11 +206,44 @@ def confirm_email(token):
         flash("Email confirmé. Tu peux te connecter.", "success")
     return redirect(url_for("login"))
 
-@app.route('/reset-password', methods=["POST"])
+@app.route('/reset-password', methods=["GET", "POST"])
 def reset_password():
-    email = request.form.get("email")
-    flash("A reset link has been sent to your email address.", "success")
-    return redirect(url_for('login'))
+    if request.method == "POST":
+        email = request.form.get("email")
+        users = load_users()
+        if email in users:
+            send_reset_email(email)
+            flash("📧 Lien de réinitialisation envoyé à ton email.", "info")
+            return redirect(url_for("login"))
+        else:
+            flash("❌ Aucun compte trouvé avec cet email.", "danger")
+            return redirect(url_for("reset_password"))
+    return render_template("reset_request.html")
+
+@app.route('/reset/<token>', methods=['GET', 'POST'])
+def reset_token(token):
+    try:
+        email = s.loads(token, salt='reset-password', max_age=3600)
+    except SignatureExpired:
+        flash("❌ Lien expiré. Recommence la procédure.", "danger")
+        return redirect(url_for('reset_password'))
+
+    if request.method == 'POST':
+        password = request.form['password']
+        confirm = request.form['confirm']
+
+        if password != confirm:
+            flash("❌ Les mots de passe ne correspondent pas.", "warning")
+            return redirect(request.url)
+
+        users = load_users()
+        if email in users:
+            users[email]['password'] = generate_password_hash(password)
+            save_users(users)
+            flash("✅ Mot de passe mis à jour. Tu peux te connecter !", "success")
+            return redirect(url_for('login'))
+
+    return render_template("reset_token.html")
 
 @app.route('/chat')
 def chat():
