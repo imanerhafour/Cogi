@@ -1,11 +1,11 @@
 {% extends 'base.html' %}
 
-{% block title %}Nouveau mot de passe{% endblock %}
+{% block title %}Réinitialiser le mot de passe{% endblock %}
 
 {% block content %}
 <div class="container mt-5">
   <h2 class="text-center">🔐 Nouveau mot de passe</h2>
-  <p class="text-muted text-center">Saisissez votre nouveau mot de passe sécurisé.</p>
+  <p class="text-muted text-center">Crée un mot de passe fort pour sécuriser ton compte.</p>
 
   {% with messages = get_flashed_messages(with_categories=true) %}
     {% if messages %}
@@ -21,28 +21,63 @@
     <div class="mb-3">
       <label for="password" class="form-label">Nouveau mot de passe</label>
       <input type="password" id="password" name="password" class="form-control" required
-        pattern="(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[\W_]).{8,}"
-        title="Minimum 8 caractères, une majuscule, une minuscule, un chiffre et un caractère spécial.">
+             onkeyup="checkPasswordStrength()"
+             pattern="(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[\W_]).{8,}"
+             title="Minimum 8 caractères, une majuscule, une minuscule, un chiffre et un caractère spécial.">
+      <ul class="list-unstyled mt-2">
+        <li id="length" class="text-danger">❌ Minimum 8 caractères</li>
+        <li id="uppercase" class="text-danger">❌ Une majuscule</li>
+        <li id="lowercase" class="text-danger">❌ Une minuscule</li>
+        <li id="digit" class="text-danger">❌ Un chiffre</li>
+        <li id="special" class="text-danger">❌ Un caractère spécial</li>
+      </ul>
     </div>
+
     <div class="mb-3">
       <label for="confirm" class="form-label">Confirmer le mot de passe</label>
       <input type="password" id="confirm" name="confirm" class="form-control" required>
     </div>
+
     <div class="d-grid">
-      <button type="submit" class="btn btn-primary">🔁 Réinitialiser</button>
+      <button type="submit" class="btn btn-success">🔁 Réinitialiser</button>
     </div>
   </form>
 </div>
 
+<!-- JS de validation -->
 <script>
-  document.addEventListener(\"DOMContentLoaded\", function () {
-    const form = document.querySelector(\"form\");
-    form.addEventListener(\"submit\", function (event) {
+  function checkPasswordStrength() {
+    const password = document.getElementById('password').value;
+    const length = document.getElementById('length');
+    const uppercase = document.getElementById('uppercase');
+    const lowercase = document.getElementById('lowercase');
+    const digit = document.getElementById('digit');
+    const special = document.getElementById('special');
+
+    length.className = password.length >= 8 ? 'text-success' : 'text-danger';
+    length.textContent = password.length >= 8 ? '✅ Minimum 8 caractères' : '❌ Minimum 8 caractères';
+
+    uppercase.className = /[A-Z]/.test(password) ? 'text-success' : 'text-danger';
+    uppercase.textContent = /[A-Z]/.test(password) ? '✅ Une majuscule' : '❌ Une majuscule';
+
+    lowercase.className = /[a-z]/.test(password) ? 'text-success' : 'text-danger';
+    lowercase.textContent = /[a-z]/.test(password) ? '✅ Une minuscule' : '❌ Une minuscule';
+
+    digit.className = /[0-9]/.test(password) ? 'text-success' : 'text-danger';
+    digit.textContent = /[0-9]/.test(password) ? '✅ Un chiffre' : '❌ Un chiffre';
+
+    special.className = /[\\W_]/.test(password) ? 'text-success' : 'text-danger';
+    special.textContent = /[\\W_]/.test(password) ? '✅ Un caractère spécial' : '❌ Un caractère spécial';
+  }
+
+  document.addEventListener('DOMContentLoaded', function () {
+    const form = document.querySelector('form');
+    form.addEventListener('submit', function (event) {
       if (!form.checkValidity()) {
         event.preventDefault();
         event.stopPropagation();
       }
-      form.classList.add(\"was-validated\");
+      form.classList.add('was-validated');
     });
   });
 </script>
