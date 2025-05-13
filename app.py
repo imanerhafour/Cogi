@@ -6,58 +6,64 @@ import os
 import requests
 from openai import OpenAI
 from dotenv import load_dotenv
+
+# Charger les variables d'environnement
 load_dotenv()
+
+# Sécurise la récupération de la clé API
+api_key = os.environ.get("TOGETHER_API_KEY", "").strip()
+if not api_key:
+    raise ValueError("TOGETHER_API_KEY is missing in .env or environment variables.")
+
 client = OpenAI(
-    api_key=os.environ.get("TOGETHER_API_KEY").strip(),
+    api_key=api_key,
     base_url="https://api.together.xyz/v1"
 )
 
 app = Flask(__name__)
 app.secret_key = 'supersecretkey'
-app.permanent_session_lifetime = timedelta(minutes=30)  # Expires after 30 minutes of inactivity
+app.permanent_session_lifetime = timedelta(minutes=30)
 
 USERS_FILE = 'users.json'
 MAX_ATTEMPTS = 5
 
-# Utility function: Load users from JSON file
+# Charger les utilisateurs
 def load_users():
     if not os.path.exists(USERS_FILE):
         return {}
     with open(USERS_FILE, 'r') as f:
         return json.load(f)
 
-# Utility function: Save users to JSON file
+# Sauvegarder les utilisateurs
 def save_users(users):
     with open(USERS_FILE, 'w') as f:
         json.dump(users, f, indent=2)
 
-# Utility function to save a new user
+# Ajouter un nouvel utilisateur
 def save_user(data):
     users = load_users()
-
-    # Check if email is already used
     email = data.get("email")
     if email in users:
-        return False  # Email already exists
+        return False
 
-    # Add new user
     users[email] = {
         "first_name": data.get("first_name"),
         "last_name": data.get("last_name"),
         "email": email,
-        "password": generate_password_hash(data.get("password")),
+        "password": generate_password_hash(data.get("password"), method='pbkdf2:sha256'),
         "gender": data.get("gender"),
         "dob": data.get("dob"),
         "attempts": 0
     }
 
     try:
-        save_users(users)  # Save users to file
+        save_users(users)
         return True
     except Exception as e:
         print(f"Error while saving: {e}")
         return False
 
+# Générer réponse du chatbot
 def generate_response(prompt, system_message="You are a bilingual (French/Arabic) psychological assistant. Respond in the user's language."):
     try:
         response = client.chat.completions.create(
@@ -77,43 +83,31 @@ def generate_response(prompt, system_message="You are a bilingual (French/Arabic
 def submit_feedback():
     message = request.form.get('message')
     name = request.form.get('name') or "Anonymous"
-
-    # For now we just display it in the console (you can later save it to a database or file)
     print(f"Feedback received from {name}: {message}")
-
     return redirect('/')
 
-# Home route
 @app.route('/')
 def index():
     return render_template('index.html')
 
-# API endpoint for chat
 @app.route('/send_message', methods=["POST"])
 def send_message():
     if "user" not in session:
         return jsonify({"error": "Not authenticated"}), 401
-    
+
     data = request.get_json()
     if not data or "message" not in data:
         return jsonify({"error": "Message required"}), 400
-    
+
     user_message = data["message"]
     system_message = data.get("system_message", "You are a psychological support assistant. Remain calm, human, and attentive.")
     
     try:
         response_text = generate_response(user_message, system_message)
-        return jsonify({
-            "status": "success",
-            "response": response_text
-        })
+        return jsonify({"status": "success", "response": response_text})
     except Exception as e:
-        return jsonify({
-            "status": "error",
-            "error": str(e)
-        }), 500
+        return jsonify({"status": "error", "error": str(e)}), 500
 
-# Secure login route
 @app.route('/login', methods=["GET", "POST"])
 def login():
     if request.method == "POST":
@@ -125,18 +119,15 @@ def login():
             return redirect(url_for("login"))
 
         users = load_users()
-
         user_data = users.get(username)
         if not user_data:
             flash("Unknown user.", "error")
             return redirect(url_for("login"))
 
-        # Check attempt count
         if user_data.get("attempts", 0) >= MAX_ATTEMPTS:
             flash("Too many failed attempts. Please try again later.", "error")
             return redirect(url_for("login"))
 
-        # Check password
         if not check_password_hash(user_data["password"], password):
             users[username]["attempts"] = user_data.get("attempts", 0) + 1
             save_users(users)
@@ -152,15 +143,12 @@ def login():
 
     return render_template("login.html")
 
-# Password reset route
 @app.route('/reset-password', methods=["POST"])
 def reset_password():
     email = request.form.get("email")
-    # Logic to verify email and send reset link (e.g., via Flask-Mail)
     flash("A reset link has been sent to your email address.", "success")
     return redirect(url_for('login'))
 
-# Chat route
 @app.route('/chat')
 def chat():
     if "user" not in session:
@@ -174,10 +162,9 @@ def chat():
         first_name = user_data.get("first_name", "")
         last_name = user_data.get("last_name", "")
     else:
-        # Fallback if user not found in JSON
         first_name = email.split('@')[0]
         last_name = ""
-    
+
     return render_template('chat.html', 
                           username=email,
                           first_name=first_name, 
@@ -196,13 +183,11 @@ def inject_user_info():
             }
     return {'first_name': '', 'last_name': ''}
 
-# Logout route
 @app.route('/logout')
 def logout():
     session.clear()
     return redirect(url_for('index'))
 
-# Mission route
 @app.route('/mission')
 def mission():
     return render_template('mission.html')
@@ -222,8 +207,7 @@ def register():
             flash("Please fill all fields and complete the CAPTCHA.", "error")
             return redirect(url_for("register"))
 
-        # CAPTCHA verification
-        secret_key = "6LfDGRYrAAAAAIE7919oR20thqiKM91YlWvbXMpD"  # Your reCAPTCHA secret key
+        secret_key = "6LfDGRYrAAAAAIE7919oR20thqiKM91YlWvbXMpD"
         payload = {'secret': secret_key, 'response': recaptcha_response}
         response = requests.post("https://www.google.com/recaptcha/api/siteverify", data=payload)
         result = response.json()
@@ -232,7 +216,6 @@ def register():
             flash("CAPTCHA verification failed.", "error")
             return redirect(url_for("register"))
 
-        # Registration attempt
         success = save_user({
             "first_name": first_name,
             "last_name": last_name,
@@ -251,6 +234,5 @@ def register():
 
     return render_template("register.html")
 
-# Startup
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000)
