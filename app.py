@@ -24,7 +24,7 @@ app.secret_key = 'supersecretkey'
 app.permanent_session_lifetime = timedelta(minutes=30)
 
 # Config email
-app.config['MAIL_SERVER'] = 'smtp.gmail.com'
+app.config['MAIL_SERVER'] = 'sandbox.smtp.mailtrap.io'
 app.config['MAIL_PORT'] = 587
 app.config['MAIL_USE_TLS'] = True
 app.config['MAIL_USERNAME'] = os.environ.get("EMAIL_USER")
