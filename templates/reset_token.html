@@ -5,14 +5,24 @@
 {% block content %}
 <div class="container mt-5">
   <h2 class="text-center">🔐 Nouveau mot de passe</h2>
-  <p class="text-muted text-center">Saisissez votre nouveau mot de passe ci-dessous.</p>
+  <p class="text-muted text-center">Saisissez votre nouveau mot de passe sécurisé.</p>
 
-  <form method="POST" class="mt-4 needs-validation" novalidate>
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+      <div class="alert alert-danger" role="alert">
+        {% for category, message in messages %}
+          <p class="mb-0">{{ message }}</p>
+        {% endfor %}
+      </div>
+    {% endif %}
+  {% endwith %}
+
+  <form method="POST" class="needs-validation" novalidate>
     <div class="mb-3">
       <label for="password" class="form-label">Nouveau mot de passe</label>
       <input type="password" id="password" name="password" class="form-control" required
-             pattern="(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[\W_]).{8,}"
-             title="Minimum 8 caractères, une majuscule, une minuscule, un chiffre et un caractère spécial.">
+        pattern="(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[\W_]).{8,}"
+        title="Minimum 8 caractères, une majuscule, une minuscule, un chiffre et un caractère spécial.">
     </div>
     <div class="mb-3">
       <label for="confirm" class="form-label">Confirmer le mot de passe</label>
@@ -23,17 +33,17 @@
     </div>
   </form>
 </div>
+
 <script>
-  document.addEventListener("DOMContentLoaded", function () {
-    const form = document.querySelector("form");
-    form.addEventListener("submit", function (event) {
+  document.addEventListener(\"DOMContentLoaded\", function () {
+    const form = document.querySelector(\"form\");
+    form.addEventListener(\"submit\", function (event) {
       if (!form.checkValidity()) {
         event.preventDefault();
         event.stopPropagation();
       }
-      form.classList.add("was-validated");
+      form.classList.add(\"was-validated\");
     });
   });
 </script>
-
 {% endblock %}
