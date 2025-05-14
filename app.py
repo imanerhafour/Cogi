@@ -53,35 +53,41 @@ def save_users(users):
         json.dump(users, f, indent=2)
 
 def save_user(data):
+    email = data.get("email", "").lower()  # 🔒 Normaliser l'email
     conn = get_db_connection()
     cur = conn.cursor()
+
+    # Vérifier si l'email existe déjà
+    cur.execute("SELECT 1 FROM users WHERE email = %s", (email,))
+    if cur.fetchone():
+        cur.close()
+        conn.close()
+        return False  # Email déjà utilisé
 
     try:
         cur.execute("""
             INSERT INTO users (email, password, first_name, last_name, gender, dob, confirmed, attempts)
             VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
         """, (
-            data.get("email"),
+            email,
             generate_password_hash(data.get("password"), method='pbkdf2:sha256'),
             data.get("first_name"),
             data.get("last_name"),
             data.get("gender"),
-            data.get("dob"),
-            False,  # confirmed
-            0       # attempts
+            data.get("dob") or None,  # ✅ Accepte None si vide
+            False,
+            0
         ))
         conn.commit()
         return True
-    except psycopg2.errors.UniqueViolation:
-        conn.rollback()
-        return False
     except Exception as e:
-        print("Erreur enregistrement utilisateur:", e)
+        print("❌ Erreur enregistrement utilisateur :", e)
         conn.rollback()
         return False
     finally:
         cur.close()
         conn.close()
+
 
 
 def is_strong_password(password):
@@ -91,7 +97,7 @@ def is_strong_password(password):
 def get_user_by_email(email):
     conn = get_db_connection()
     cur = conn.cursor()
-    cur.execute("SELECT email, password, first_name, last_name FROM users WHERE email = %s", (email,))
+    cur.execute("SELECT email, password, first_name, last_name, confirmed, attempts FROM users WHERE email = %s", (email.lower(),))
     result = cur.fetchone()
     cur.close()
     conn.close()
@@ -100,9 +106,12 @@ def get_user_by_email(email):
             "email": result[0],
             "password": result[1],
             "first_name": result[2],
-            "last_name": result[3]
+            "last_name": result[3],
+            "confirmed": result[4],
+            "attempts": result[5]
         }
     return None
+
 
 def generate_bot_response(user_message):
     return "Ceci est une réponse automatique (à remplacer par ton modèle IA)"
