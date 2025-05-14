@@ -114,25 +114,30 @@ def chat():
 
     if request.method == 'POST':
         user_message = request.form['message']
-
-        # 💬 Ici, appelle ta fonction qui génère la réponse du bot
         bot_reply = generate_bot_response(user_message)
 
-        # 💾 Sauvegarde dans PostgreSQL
+        # Sauvegarde dans la base PostgreSQL
         save_message(email, user_message, 'user')
         save_message(email, bot_reply, 'bot')
 
-        return render_template('chat.html',
-                               username=email,
-                               first_name=user_data.get("first_name", ""),
-                               last_name=user_data.get("last_name", ""),
-                               user_message=user_message,
-                               bot_reply=bot_reply)
+    # Charger l'historique depuis la base
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute("""
+        SELECT message, sender, timestamp
+        FROM conversations
+        WHERE user_email = %s
+        ORDER BY timestamp ASC
+    """, (email,))
+    history = cur.fetchall()
+    cur.close()
+    conn.close()
 
     return render_template('chat.html',
                            username=email,
                            first_name=user_data.get("first_name", ""),
-                           last_name=user_data.get("last_name", ""))
+                           last_name=user_data.get("last_name", ""),
+                           history=history)
 
 
 
