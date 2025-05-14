@@ -162,14 +162,13 @@ def login():
             flash('Username and password are required!', 'error')
             return redirect(url_for("login"))
 
-        users = load_users()
-        user_data = users.get(username)
+        user_data = get_user_by_email(username)
         if not user_data:
             flash("Unknown user.", "error")
             return redirect(url_for("login"))
 
         if not user_data.get("confirmed", False):
-            flash("Confirme d’abord ton adresse email.", "error")
+            flash("Please confirm your email before logging in.", "error")
             return redirect(url_for("login"))
 
         if user_data.get("attempts", 0) >= MAX_ATTEMPTS:
@@ -177,18 +176,31 @@ def login():
             return redirect(url_for("login"))
 
         if not check_password_hash(user_data["password"], password):
-            user_data["attempts"] += 1
-            save_users(users)
+            # Incrémenter les tentatives
+            conn = get_db_connection()
+            cur = conn.cursor()
+            cur.execute("UPDATE users SET attempts = attempts + 1 WHERE email = %s", (username,))
+            conn.commit()
+            cur.close()
+            conn.close()
+
             flash("Incorrect username or password.", "error")
             return redirect(url_for("login"))
 
-        user_data["attempts"] = 0
-        save_users(users)
+        # Réinitialiser les tentatives
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute("UPDATE users SET attempts = 0 WHERE email = %s", (username,))
+        conn.commit()
+        cur.close()
+        conn.close()
+
         session.permanent = True
         session["user"] = username
         return redirect(url_for("chat"))
 
     return render_template("login.html")
+
 
 @app.route('/register', methods=["GET", "POST"])
 def register():
@@ -287,15 +299,15 @@ def send_message():
 @app.context_processor
 def inject_user_info():
     if 'user' in session:
-        users = load_users()
         email = session['user']
-        if email in users:
-            user_data = users[email]
+        user_data = get_user_by_email(email)
+        if user_data:
             return {
                 'first_name': user_data.get('first_name', ''),
                 'last_name': user_data.get('last_name', '')
             }
     return {'first_name': '', 'last_name': ''}
+
 
 @app.route('/reset_request', methods=["GET", "POST"])
 def reset_request():
