@@ -1,31 +1,21 @@
-// Navigation active
-document.addEventListener('DOMContentLoaded', function() {
-  // Récupère le chemin actuel
+document.addEventListener('DOMContentLoaded', function () {
+  // ========== Navigation active ==========
   const currentPath = window.location.pathname;
-  
-  // Récupère tous les liens de navigation
   const navLinks = document.querySelectorAll('.navbar-nav .nav-link');
-  
-  // Marque le lien actif
   navLinks.forEach(link => {
-    if (link.getAttribute('href') === currentPath) {
-      link.classList.add('active');
-    } else {
-      link.classList.remove('active');
-    }
+    link.classList.toggle('active', link.getAttribute('href') === currentPath);
   });
 
-  // Créer un logo placeholder si nécessaire
+  // ========== Logo fallback ==========
   createLogoIfMissing();
 
-  // =============================================
-  // RECONNAISSANCE VOCALE AMÉLIORÉE
-  // =============================================
+  // ========== Micro et reconnaissance vocale ==========
   const micBtn = document.getElementById('micBtn');
   const userInput = document.getElementById('user-input');
-  const voiceStatus = document.createElement('div'); // Création dynamique du statut
-  
-  // Configuration du statut vocal
+  const sendBtn = document.getElementById('send-btn');
+  const chatBox = document.getElementById('chat-box');
+
+  const voiceStatus = document.createElement('div');
   voiceStatus.id = 'voice-status';
   voiceStatus.className = 'voice-status';
   voiceStatus.textContent = 'Micro: inactif';
@@ -34,94 +24,59 @@ document.addEventListener('DOMContentLoaded', function() {
   let recognition;
 
   if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
-      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-      recognition = new SpeechRecognition();
-      recognition.continuous = false;
-      recognition.interimResults = false;
-      recognition.lang = 'fr-FR';
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    recognition = new SpeechRecognition();
+    recognition.continuous = false;
+    recognition.interimResults = false;
+    recognition.lang = 'fr-FR';
 
-      micBtn.addEventListener('click', function() {
-          if (micBtn.classList.contains('recording')) {
-              recognition.stop();
-          } else {
-              try {
-                  recognition.start();
-                  voiceStatus.textContent = "Micro: écoute en cours...";
-                  voiceStatus.classList.add('voice-active');
-                  micBtn.innerHTML = '<i class="bi bi-mic-fill"></i>';
-                  micBtn.classList.add('recording');
-              } catch (error) {
-                  voiceStatus.textContent = "Erreur: " + error.message;
-              }
-          }
-      });
-
-      recognition.onresult = function(event) {
-          const transcript = event.results[0][0].transcript;
-          userInput.value = transcript;
-          resetMicUI();
-      };
-
-      recognition.onerror = function(event) {
-          voiceStatus.textContent = `Erreur: ${event.error}`;
-          resetMicUI();
-      };
-
-      recognition.onend = function() {
-          if (!micBtn.classList.contains('recording')) return;
-          resetMicUI();
-      };
-
-      function resetMicUI() {
-          voiceStatus.textContent = "Micro: inactif";
-          voiceStatus.classList.remove('voice-active');
-          micBtn.innerHTML = '<i class="bi bi-mic"></i>';
-          micBtn.classList.remove('recording');
+    micBtn.addEventListener('click', function () {
+      if (micBtn.classList.contains('recording')) {
+        recognition.stop();
+      } else {
+        try {
+          recognition.start();
+          voiceStatus.textContent = "Micro: écoute en cours...";
+          voiceStatus.classList.add('voice-active');
+          micBtn.innerHTML = '<i class="bi bi-mic-fill"></i>';
+          micBtn.classList.add('recording');
+        } catch (error) {
+          voiceStatus.textContent = "Erreur: " + error.message;
+        }
       }
-  } else {
-      micBtn.disabled = true;
-      voiceStatus.textContent = "Micro: non supporté";
-      micBtn.title = "Reconnaissance vocale non supportée par votre navigateur";
-  }
-});
+    });
 
-// Fonction pour créer un logo textuel si l'image de logo est manquante
-function createLogoIfMissing() {
-  const logoImg = document.querySelector('.navbar-brand img');
-  if (logoImg) {
-    logoImg.onerror = function() {
-      this.style.display = 'none';
-      const brand = document.querySelector('.navbar-brand');
-      brand.innerHTML = 'Cogi <span class="badge bg-light text-success">AI</span>';
+    recognition.onresult = function (event) {
+      const transcript = event.results[0][0].transcript;
+      userInput.value = transcript;
+
+      if (sendBtn) sendBtn.click();
+      resetMicUI();
     };
+
+    recognition.onerror = function (event) {
+      voiceStatus.textContent = `Erreur: ${event.error}`;
+      resetMicUI();
+    };
+
+    recognition.onend = function () {
+      if (!micBtn.classList.contains('recording')) return;
+      resetMicUI();
+    };
+
+    function resetMicUI() {
+      voiceStatus.textContent = "Micro: inactif";
+      voiceStatus.classList.remove('voice-active');
+      micBtn.innerHTML = '<i class="bi bi-mic"></i>';
+      micBtn.classList.remove('recording');
+    }
+  } else {
+    micBtn.disabled = true;
+    voiceStatus.textContent = "Micro: non supporté";
+    micBtn.title = "Reconnaissance vocale non supportée par votre navigateur";
   }
-}
 
-// Fonction pour formater la date et l'heure pour les messages
-function formatTimestamp() {
-  const now = new Date();
-  const hours = now.getHours().toString().padStart(2, '0');
-  const minutes = now.getMinutes().toString().padStart(2, '0');
-  return `${hours}:${minutes}`;
-}
-recognition.onresult = function(event) {
-  const transcript = event.results[0][0].transcript;
-  userInput.value = transcript;
-  
-  // Déclenche l'envoi automatique
-  const sendBtn = document.getElementById('send-btn');
-  if (sendBtn) {
-      sendBtn.click();  // Déclenche l'événement submit du formulaire
-  }
-  resetMicUI();
-};
-
-//
-document.addEventListener('DOMContentLoaded', function () {
-  const sendBtn = document.getElementById('send-btn');
-  const userInput = document.getElementById('user-input');
-  const chatBox = document.getElementById('chat-box');
-
+  // ========== Envoi de message à Flask ==========
   function displayMessage(text, sender) {
     const msg = document.createElement('div');
     msg.className = `message ${sender}`;
@@ -147,7 +102,7 @@ document.addEventListener('DOMContentLoaded', function () {
     })
       .then(response => response.json())
       .then(data => {
-        console.log('Réponse API :', data); // 🪵 Ajout utile
+        console.log('Réponse API :', data);
         const botReply = data.reply || "❌ Erreur : réponse vide";
         displayMessage(botReply, 'bot');
       })
@@ -157,3 +112,23 @@ document.addEventListener('DOMContentLoaded', function () {
       });
   });
 });
+
+// ========== Logo fallback ==========
+function createLogoIfMissing() {
+  const logoImg = document.querySelector('.navbar-brand img');
+  if (logoImg) {
+    logoImg.onerror = function () {
+      this.style.display = 'none';
+      const brand = document.querySelector('.navbar-brand');
+      brand.innerHTML = 'Cogi <span class="badge bg-light text-success">AI</span>';
+    };
+  }
+}
+
+// ========== Timestamp pour messages ==========
+function formatTimestamp() {
+  const now = new Date();
+  const hours = now.getHours().toString().padStart(2, '0');
+  const minutes = now.getMinutes().toString().padStart(2, '0');
+  return `${hours}:${minutes}`;
+}
