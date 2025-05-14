@@ -74,7 +74,7 @@ def save_user(data):
         return False
 
 def is_strong_password(password):
-    return re.match(r'^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[\W_]).{8,}$', password)
+    return re.match(r'^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*(),.?\":{}|<>]).{8,}$', password)
 
 # ---------- Routes principales ----------
 
@@ -142,13 +142,11 @@ def register():
             flash("Please fill all fields and complete the CAPTCHA.", "error")
             return redirect(url_for("register"))
 
-        # 🔐 Récupère la clé secrète correctement
-        secret_key = os.environ.get("RECAPTCHA_SECRET") or "6LedszgrAAAAAE6_89wcyjVmHD_JIYYRa_rccoZa"
+        secret_key = os.environ.get("RECAPTCHA_SECRET")
         if not secret_key:
             flash("Configuration CAPTCHA manquante (clé secrète).", "error")
             return redirect(url_for("register"))
 
-        # 🧪 Vérifie le CAPTCHA auprès de Google
         payload = {'secret': secret_key, 'response': recaptcha_response}
         try:
             captcha_check = requests.post("https://www.google.com/recaptcha/api/siteverify", data=payload).json()
@@ -204,8 +202,6 @@ def logout():
     session.clear()
     return redirect(url_for('index'))
 
-# ---------- Chatbot IA ----------
-
 @app.route("/send_message", methods=["POST"])
 def send_message():
     try:
@@ -243,8 +239,6 @@ def inject_user_info():
             }
     return {'first_name': '', 'last_name': ''}
 
-# ---------- 🔁 Réinitialisation de mot de passe ----------
-
 @app.route('/reset_request', methods=["GET", "POST"])
 def reset_request():
     if request.method == "POST":
@@ -268,7 +262,6 @@ def reset_request():
         return redirect(url_for("login"))
 
     return render_template("reset_request.html")
-
 
 @app.route('/reset/<token>', methods=["GET", "POST"])
 def reset_token(token):
@@ -294,7 +287,7 @@ def reset_token(token):
             return render_template("reset_token.html", token=token)
 
         users = load_users()
-        users[email]["password"] = generate_password_hash(password)
+        users[email]["password"] = generate_password_hash(password, method='pbkdf2:sha256')
         save_users(users)
 
         flash("Mot de passe réinitialisé. Tu peux te connecter.", "success")
@@ -304,4 +297,3 @@ def reset_token(token):
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000, debug=True)
-
