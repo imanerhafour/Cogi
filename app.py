@@ -77,6 +77,23 @@ def save_user(data):
 def is_strong_password(password):
     return re.match(r'^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*(),.?\":{}|<>]).{8,}$', password)
 
+
+def get_user_by_email(email):
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute("SELECT email, password, first_name, last_name FROM users WHERE email = %s", (email,))
+    result = cur.fetchone()
+    cur.close()
+    conn.close()
+    if result:
+        return {
+            "email": result[0],
+            "password": result[1],
+            "first_name": result[2],
+            "last_name": result[3]
+        }
+    return None
+
 # ---------- Routes principales ----------
 
 @app.route('/')
@@ -87,13 +104,16 @@ def index():
 def chat():
     if "user" not in session:
         return redirect(url_for("login"))
-    users = load_users()
+
     email = session["user"]
-    user_data = users.get(email, {})
+    user_data = get_user_by_email(email)  # version PostgreSQL
+
     return render_template('chat.html',
                            username=email,
                            first_name=user_data.get("first_name", ""),
                            last_name=user_data.get("last_name", ""))
+
+
 
 @app.route('/login', methods=["GET", "POST"])
 def login():
@@ -297,7 +317,7 @@ def reset_token(token):
     return render_template("reset_token.html", token=token)
 
 
-
+# ---------- Migration vers  de  PostgreSQL----------
 def get_db_connection():
     return psycopg2.connect(
         dbname="cogi_db",
@@ -305,6 +325,18 @@ def get_db_connection():
         password="", 
         host="localhost"
     )
+
+# ---------- Sauvegarde de l'historique des chats  ----------
+def save_message(user_email, message, sender):
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute("""
+        INSERT INTO conversations (user_email, message, sender)
+        VALUES (%s, %s, %s)
+    """, (user_email, message, sender))
+    conn.commit()
+    cur.close()
+    conn.close()
 
 
 if __name__ == "__main__":
