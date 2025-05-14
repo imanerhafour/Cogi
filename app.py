@@ -53,26 +53,36 @@ def save_users(users):
         json.dump(users, f, indent=2)
 
 def save_user(data):
-    users = load_users()
-    email = data.get("email")
-    if email in users:
-        return False
-    users[email] = {
-        "first_name": data.get("first_name"),
-        "last_name": data.get("last_name"),
-        "email": email,
-        "password": generate_password_hash(data.get("password"), method='pbkdf2:sha256'),
-        "gender": data.get("gender"),
-        "dob": data.get("dob"),
-        "confirmed": False,
-        "attempts": 0
-    }
+    conn = get_db_connection()
+    cur = conn.cursor()
+
     try:
-        save_users(users)
+        cur.execute("""
+            INSERT INTO users (email, password, first_name, last_name, gender, dob, confirmed, attempts)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+        """, (
+            data.get("email"),
+            generate_password_hash(data.get("password"), method='pbkdf2:sha256'),
+            data.get("first_name"),
+            data.get("last_name"),
+            data.get("gender"),
+            data.get("dob"),
+            False,  # confirmed
+            0       # attempts
+        ))
+        conn.commit()
         return True
-    except Exception as e:
-        print(f"Error while saving: {e}")
+    except psycopg2.errors.UniqueViolation:
+        conn.rollback()
         return False
+    except Exception as e:
+        print("Erreur enregistrement utilisateur:", e)
+        conn.rollback()
+        return False
+    finally:
+        cur.close()
+        conn.close()
+
 
 def is_strong_password(password):
     return re.match(r'^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*(),.?\":{}|<>]).{8,}$', password)
