@@ -22,8 +22,7 @@
       <label for="password" class="form-label">Nouveau mot de passe</label>
       <input type="password" id="password" name="password" class="form-control" required
              onkeyup="checkPasswordStrength()"
-             pattern="(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*(),.?\":{}|<>]).{8,}"
-             title="Minimum 8 caractères, une majuscule, une minuscule, un chiffre et un caractère spécial.">
+            pattern="(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*(),.?&quot;:{}|&lt;&gt;]).{8,}"
       <ul class="list-unstyled mt-2">
         <li id="length" class="text-danger">❌ Minimum 8 caractères</li>
         <li id="uppercase" class="text-danger">❌ Une majuscule</li>
