@@ -141,17 +141,24 @@ def register():
         if not all(form_data.values()) or not recaptcha_response:
             flash("Please fill all fields and complete the CAPTCHA.", "error")
             return redirect(url_for("register"))
-            
 
-        secret_key = os.environ.get("RECAPTCHA_SECRET")
-         # 🔍 DEBUG : Affiche la clé secrète utilisée
-        print("Secret Key:", secret_key)
-        
+        # 🔐 Récupère la clé secrète correctement
+        secret_key = os.environ.get("RECAPTCHA_SECRET") or "6LedszgrAAAAAE6_89wcyjVmHD_JIYYRa_rccoZa"
+        if not secret_key:
+            flash("Configuration CAPTCHA manquante (clé secrète).", "error")
+            return redirect(url_for("register"))
+
+        # 🧪 Vérifie le CAPTCHA auprès de Google
         payload = {'secret': secret_key, 'response': recaptcha_response}
-        response = requests.post("https://www.google.com/recaptcha/api/siteverify", data=payload)
+        try:
+            captcha_check = requests.post("https://www.google.com/recaptcha/api/siteverify", data=payload).json()
+            print("CAPTCHA Google Response:", captcha_check)
+        except Exception as e:
+            flash("Erreur lors de la vérification CAPTCHA : " + str(e), "error")
+            return redirect(url_for("register"))
 
-        if not response.json().get('success'):
-            flash("CAPTCHA verification failed.", "error")
+        if not captcha_check.get('success'):
+            flash("CAPTCHA verification failed. Code: " + ", ".join(captcha_check.get("error-codes", [])), "error")
             return redirect(url_for("register"))
 
         if not is_strong_password(form_data["password"]):
