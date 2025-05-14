@@ -260,5 +260,30 @@ def inject_user_info():
             }
     return {'first_name': '', 'last_name': ''}
 
+@app.route("/send_message", methods=["POST"])
+def send_message():
+    try:
+        user_input = request.json.get("message", "")
+        if not user_input:
+            return jsonify({"reply": "❌ Message vide"}), 400
+
+        # Appel à Together / Mistral / autre
+        response = client.chat.completions.create(
+            model="mistralai/Mistral-7B-Instruct-v0.1",
+            messages=[
+                {"role": "system", "content": "You are a helpful mental health assistant."},
+                {"role": "user", "content": user_input},
+            ],
+            max_tokens=200,
+            temperature=0.7,
+        )
+
+        reply = response.choices[0].message.content.strip()
+        return jsonify({"reply": reply})
+
+    except Exception as e:
+        print("Erreur API :", e)
+        return jsonify({"reply": "⚠
+
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000)
