@@ -47,6 +47,7 @@
 <script>
   function checkPasswordStrength() {
     const password = document.getElementById('password').value;
+
     const length = document.getElementById('length');
     const uppercase = document.getElementById('uppercase');
     const lowercase = document.getElementById('lowercase');
@@ -65,10 +66,14 @@
     digit.className = /[0-9]/.test(password) ? 'text-success' : 'text-danger';
     digit.textContent = /[0-9]/.test(password) ? '✅ Un chiffre' : '❌ Un chiffre';
 
-    special.className = /[\\W_]/.test(password) ? 'text-success' : 'text-danger';
-    special.textContent = /[\\W_]/.test(password) ? '✅ Un caractère spécial' : '❌ Un caractère spécial';
+    // ⚠️ Correction ici : détecter tous les caractères spéciaux que tu acceptes
+    special.className = /[!@#$%^&*(),.?":{}|<>]/.test(password) ? 'text-success' : 'text-danger';
+    special.textContent = /[!@#$%^&*(),.?":{}|<>]/.test(password)
+      ? '✅ Un caractère spécial'
+      : '❌ Un caractère spécial';
   }
 
+  // Validation HTML5 visuelle
   document.addEventListener('DOMContentLoaded', function () {
     const form = document.querySelector('form');
     form.addEventListener('submit', function (event) {
@@ -80,4 +85,5 @@
     });
   });
 </script>
+
 {% endblock %}
