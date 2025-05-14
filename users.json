@@ -93,5 +93,15 @@
     "dob": "2025-05-13",
     "attempts": 0,
     "confirmed": true
+  },
+  "imane.rhafour@gmail.com": {
+    "first_name": "Imane",
+    "last_name": "RHAFOUR",
+    "email": "imane.rhafour@gmail.com",
+    "password": "pbkdf2:sha256:1000000$MpSEvvcJWsCoRDE0$9940e274137492aa3e677a7b07f897d064aca31c167097999e886fc537a45152",
+    "gender": "female",
+    "dob": "2001-10-02",
+    "confirmed": true,
+    "attempts": 0
   }
 }
