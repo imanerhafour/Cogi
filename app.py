@@ -141,10 +141,12 @@ def register():
         if not all(form_data.values()) or not recaptcha_response:
             flash("Please fill all fields and complete the CAPTCHA.", "error")
             return redirect(url_for("register"))
-             # 🔍 DEBUG : Affiche la clé secrète utilisée
-        print("Secret Key:", secret_key)
+            
 
         secret_key = os.environ.get("RECAPTCHA_SECRET")
+         # 🔍 DEBUG : Affiche la clé secrète utilisée
+        print("Secret Key:", secret_key)
+        
         payload = {'secret': secret_key, 'response': recaptcha_response}
         response = requests.post("https://www.google.com/recaptcha/api/siteverify", data=payload)
 
