@@ -74,5 +74,24 @@
     "gender": "male",
     "dob": "2025-05-06",
     "attempts": 0
+  },
+  "i.rhafour01@gmail.com": {
+    "first_name": "Imane",
+    "last_name": "RHAFOUR",
+    "email": "i.rhafour01@gmail.com",
+    "password": "pbkdf2:sha256:1000000$WtKWJ6BbOqTYiEFH$e8376a26eb28b84d0845719e493a39287114225641e08a9cb9aafc2a0ca912ae",
+    "gender": "female",
+    "dob": "2001-10-02",
+    "attempts": 0
+  },
+  "emy2003elyassine@gmail.com": {
+    "first_name": "Imane",
+    "last_name": "El Yassine",
+    "email": "emy2003elyassine@gmail.com",
+    "password": "pbkdf2:sha256:1000000$dxu5azv3in2Crm3Y$103a4c042da0cea93368cbfe8b95de758d711d968a480b43fc1fae354f8d51c0",
+    "gender": "female",
+    "dob": "2025-05-13",
+    "attempts": 0,
+    "confirmed": true
   }
 }
