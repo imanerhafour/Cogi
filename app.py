@@ -295,5 +295,16 @@ def reset_token(token):
 
     return render_template("reset_token.html", token=token)
 
+import psycopg2
+
+def get_db_connection():
+    return psycopg2.connect(
+        dbname="cogi_db",
+        user="mac",  
+        password="", 
+        host="localhost"
+    )
+
+
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000, debug=True)
