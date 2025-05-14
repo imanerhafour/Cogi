@@ -13,10 +13,10 @@ import re
 # Charger les variables d'environnement
 load_dotenv()
 
-# Configuration du client OpenAI/Together
+# Configuration API Together (OpenAI compatible)
 api_key = os.environ.get("TOGETHER_API_KEY", "").strip()
 if not api_key:
-    raise ValueError("TOGETHER_API_KEY is missing in .env or environment variables.")
+    raise ValueError("TOGETHER_API_KEY is missing")
 
 client = OpenAI(
     api_key=api_key,
@@ -36,11 +36,11 @@ app.config['MAIL_PASSWORD'] = os.environ.get("EMAIL_PASS")
 mail = Mail(app)
 
 s = URLSafeTimedSerializer(app.secret_key)
-
 USERS_FILE = 'users.json'
 MAX_ATTEMPTS = 5
 
-# Utilitaires utilisateur
+# ---------- Fonctions Utilitaires ----------
+
 def load_users():
     if not os.path.exists(USERS_FILE):
         return {}
@@ -56,7 +56,6 @@ def save_user(data):
     email = data.get("email")
     if email in users:
         return False
-
     users[email] = {
         "first_name": data.get("first_name"),
         "last_name": data.get("last_name"),
@@ -77,7 +76,8 @@ def save_user(data):
 def is_strong_password(password):
     return re.match(r'^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[\W_]).{8,}$', password)
 
-# Routes
+# ---------- Routes principales ----------
+
 @app.route('/')
 def index():
     return render_template('index.html')
@@ -89,9 +89,9 @@ def chat():
     users = load_users()
     email = session["user"]
     user_data = users.get(email, {})
-    return render_template('chat.html', 
+    return render_template('chat.html',
                            username=email,
-                           first_name=user_data.get("first_name", ""), 
+                           first_name=user_data.get("first_name", ""),
                            last_name=user_data.get("last_name", ""))
 
 @app.route('/login', methods=["GET", "POST"])
@@ -115,7 +115,7 @@ def login():
             return redirect(url_for("login"))
 
         if user_data.get("attempts", 0) >= MAX_ATTEMPTS:
-            flash("Too many failed attempts. Please try again later.", "error")
+            flash("Too many failed attempts. Try again later.", "error")
             return redirect(url_for("login"))
 
         if not check_password_hash(user_data["password"], password):
@@ -165,7 +165,7 @@ def register():
         msg.body = f"Bienvenue sur Cogi ! Clique ici pour confirmer ton adresse : {link}"
         mail.send(msg)
 
-        flash("Inscription réussie ! Vérifie ton email pour confirmer.", "success")
+        flash("Inscription réussie ! Vérifie ton email.", "success")
         return redirect(url_for("login"))
 
     return render_template("register.html")
@@ -175,7 +175,7 @@ def confirm_email(token):
     try:
         email = s.loads(token, salt='email-confirm', max_age=3600)
     except SignatureExpired:
-        flash("Lien expiré. Réinscris-toi.", "danger")
+        flash("Lien expiré.", "danger")
         return redirect(url_for("register"))
     except BadSignature:
         flash("Lien invalide.", "danger")
@@ -186,81 +186,15 @@ def confirm_email(token):
         users[email]["confirmed"] = True
         save_users(users)
         flash("Email confirmé. Tu peux te connecter.", "success")
-    else:
-        flash("Utilisateur introuvable.", "danger")
     return redirect(url_for("login"))
-
-@app.route('/reset-password', methods=['POST'])
-def reset_password():
-    email = request.form.get("email")
-    users = load_users()
-
-    if email not in users:
-        flash("❌ Adresse inconnue.", "danger")
-        return redirect(url_for("login"))
-
-    token = s.dumps(email, salt='password-reset')
-    link = url_for('reset_with_token', token=token, _external=True)
-
-    msg = Message("Réinitialisation du mot de passe", sender=app.config['MAIL_USERNAME'], recipients=[email])
-    msg.body = f"Clique ici pour réinitialiser ton mot de passe : {link}"
-    mail.send(msg)
-
-    flash("📩 Un lien de réinitialisation a été envoyé.", "success")
-    return redirect(url_for("login"))
-
-@app.route('/reset/<token>', methods=['GET', 'POST'])
-def reset_with_token(token):
-    try:
-        email = s.loads(token, salt='password-reset', max_age=3600)
-    except SignatureExpired:
-        flash("❌ Lien expiré.", "danger")
-        return redirect(url_for("login"))
-
-    users = load_users()
-
-    if request.method == "POST":
-        password = request.form.get("password")
-        confirm = request.form.get("confirm")
-
-        if not password or not confirm:
-            flash("❌ Tous les champs sont requis.", "danger")
-            return redirect(request.url)
-
-        if password != confirm:
-            flash("❌ Les mots de passe ne correspondent pas.", "danger")
-            return redirect(request.url)
-
-        if not is_strong_password(password):
-            flash("❌ Mot de passe trop faible.", "danger")
-            return redirect(request.url)
-
-        users[email]['password'] = generate_password_hash(password, method='pbkdf2:sha256')
-        save_users(users)
-        flash("✅ Mot de passe mis à jour.", "success")
-        return redirect(url_for("login"))
-
-    return render_template("reset_token.html")
 
 @app.route('/logout')
 def logout():
     session.clear()
     return redirect(url_for('index'))
 
-@app.context_processor
-def inject_user_info():
-    if 'user' in session:
-        users = load_users()
-        email = session['user']
-        if email in users:
-            user_data = users[email]
-            return {
-                'first_name': user_data.get('first_name', ''),
-                'last_name': user_data.get('last_name', '')
-            }
-    return {'first_name': '', 'last_name': ''}
+# ---------- Chatbot IA ----------
 
-# ✅ ROUTE pour chatbot (IA)
 @app.route("/send_message", methods=["POST"])
 def send_message():
     try:
@@ -282,8 +216,21 @@ def send_message():
         return jsonify({"reply": reply})
 
     except Exception as e:
-        print("Erreur API :", e)
+        print("Erreur serveur:", e)
         return jsonify({"reply": "⚠️ Erreur serveur : " + str(e)}), 500
 
+@app.context_processor
+def inject_user_info():
+    if 'user' in session:
+        users = load_users()
+        email = session['user']
+        if email in users:
+            user_data = users[email]
+            return {
+                'first_name': user_data.get('first_name', ''),
+                'last_name': user_data.get('last_name', '')
+            }
+    return {'first_name': '', 'last_name': ''}
+
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000)
+    app.run(debug=True)
