@@ -115,3 +115,45 @@ recognition.onresult = function(event) {
   }
   resetMicUI();
 };
+
+//
+document.addEventListener('DOMContentLoaded', function () {
+  const sendBtn = document.getElementById('send-btn');
+  const userInput = document.getElementById('user-input');
+  const chatBox = document.getElementById('chat-box');
+
+  function displayMessage(text, sender) {
+    const msg = document.createElement('div');
+    msg.className = `message ${sender}`;
+    msg.innerHTML = `<p>${text}</p><span class="timestamp">${formatTimestamp()}</span>`;
+    chatBox.appendChild(msg);
+    chatBox.scrollTop = chatBox.scrollHeight;
+  }
+
+  sendBtn.addEventListener('click', function (e) {
+    e.preventDefault();
+    const message = userInput.value.trim();
+    if (!message) return;
+
+    displayMessage(message, 'user');
+    userInput.value = '';
+
+    fetch('/send_message', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ message: message })
+    })
+      .then(response => response.json())
+      .then(data => {
+        console.log('Réponse API :', data); // 🪵 Ajout utile
+        const botReply = data.reply || "❌ Erreur : réponse vide";
+        displayMessage(botReply, 'bot');
+      })
+      .catch(error => {
+        console.error('Erreur fetch :', error);
+        displayMessage("⚠️ Erreur serveur", 'bot');
+      });
+  });
+});
