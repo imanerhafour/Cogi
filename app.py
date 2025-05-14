@@ -94,24 +94,46 @@ def get_user_by_email(email):
         }
     return None
 
+def generate_bot_response(user_message):
+    return "Ceci est une réponse automatique (à remplacer par ton modèle IA)"
+
+
 # ---------- Routes principales ----------
 
 @app.route('/')
 def index():
     return render_template('index.html')
 
-@app.route('/chat')
+@app.route('/chat', methods=['GET', 'POST'])
 def chat():
     if "user" not in session:
         return redirect(url_for("login"))
 
     email = session["user"]
-    user_data = get_user_by_email(email)  # version PostgreSQL
+    user_data = get_user_by_email(email)
+
+    if request.method == 'POST':
+        user_message = request.form['message']
+
+        # 💬 Ici, appelle ta fonction qui génère la réponse du bot
+        bot_reply = generate_bot_response(user_message)
+
+        # 💾 Sauvegarde dans PostgreSQL
+        save_message(email, user_message, 'user')
+        save_message(email, bot_reply, 'bot')
+
+        return render_template('chat.html',
+                               username=email,
+                               first_name=user_data.get("first_name", ""),
+                               last_name=user_data.get("last_name", ""),
+                               user_message=user_message,
+                               bot_reply=bot_reply)
 
     return render_template('chat.html',
                            username=email,
                            first_name=user_data.get("first_name", ""),
                            last_name=user_data.get("last_name", ""))
+
 
 
 
