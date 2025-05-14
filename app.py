@@ -243,6 +243,65 @@ def inject_user_info():
             }
     return {'first_name': '', 'last_name': ''}
 
+# ---------- 🔁 Réinitialisation de mot de passe ----------
+
+@app.route('/reset_request', methods=["GET", "POST"])
+def reset_request():
+    if request.method == "POST":
+        email = request.form.get("email")
+        users = load_users()
+
+        if not email or email not in users:
+            flash("Aucun compte associé à cet email.", "error")
+            return redirect(url_for("reset_request"))
+
+        token = s.dumps(email, salt='reset-password')
+        reset_link = url_for("reset_token", token=token, _external=True)
+
+        msg = Message("Réinitialisation de mot de passe",
+                      sender=app.config['MAIL_USERNAME'],
+                      recipients=[email])
+        msg.body = f"Clique ici pour réinitialiser ton mot de passe : {reset_link}"
+        mail.send(msg)
+
+        flash("Un lien de réinitialisation a été envoyé à ton adresse email.", "success")
+        return redirect(url_for("login"))
+
+    return render_template("reset_request.html")
+
+
+@app.route('/reset/<token>', methods=["GET", "POST"])
+def reset_token(token):
+    try:
+        email = s.loads(token, salt='reset-password', max_age=3600)
+    except SignatureExpired:
+        flash("Le lien a expiré.", "danger")
+        return redirect(url_for("reset_request"))
+    except BadSignature:
+        flash("Lien invalide ou modifié.", "danger")
+        return redirect(url_for("reset_request"))
+
+    if request.method == "POST":
+        password = request.form.get("password")
+        confirm = request.form.get("confirm")
+
+        if password != confirm:
+            flash("Les mots de passe ne correspondent pas.", "error")
+            return render_template("reset_token.html", token=token)
+
+        if not is_strong_password(password):
+            flash("Mot de passe trop faible.", "error")
+            return render_template("reset_token.html", token=token)
+
+        users = load_users()
+        users[email]["password"] = generate_password_hash(password)
+        save_users(users)
+
+        flash("Mot de passe réinitialisé. Tu peux te connecter.", "success")
+        return redirect(url_for("login"))
+
+    return render_template("reset_token.html", token=token)
+
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000, debug=True)
 
