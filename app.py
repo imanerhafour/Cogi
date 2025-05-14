@@ -9,6 +9,7 @@ import requests
 from openai import OpenAI
 from dotenv import load_dotenv
 import re
+import psycopg2
 
 # Charger les variables d'environnement
 load_dotenv()
@@ -295,7 +296,7 @@ def reset_token(token):
 
     return render_template("reset_token.html", token=token)
 
-import psycopg2
+
 
 def get_db_connection():
     return psycopg2.connect(
