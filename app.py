@@ -13,7 +13,7 @@ import re
 # Charger les variables d'environnement
 load_dotenv()
 
-# Configuration du client OpenAI
+# Configuration du client OpenAI/Together
 api_key = os.environ.get("TOGETHER_API_KEY", "").strip()
 if not api_key:
     raise ValueError("TOGETHER_API_KEY is missing in .env or environment variables.")
@@ -260,6 +260,7 @@ def inject_user_info():
             }
     return {'first_name': '', 'last_name': ''}
 
+# ✅ ROUTE pour chatbot (IA)
 @app.route("/send_message", methods=["POST"])
 def send_message():
     try:
@@ -267,7 +268,6 @@ def send_message():
         if not user_input:
             return jsonify({"reply": "❌ Message vide"}), 400
 
-        # Appel à Together / Mistral / autre
         response = client.chat.completions.create(
             model="mistralai/Mistral-7B-Instruct-v0.1",
             messages=[
@@ -283,7 +283,7 @@ def send_message():
 
     except Exception as e:
         print("Erreur API :", e)
-        return jsonify({"reply": "⚠
+        return jsonify({"reply": "⚠️ Erreur serveur : " + str(e)}), 500
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000)
