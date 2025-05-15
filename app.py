@@ -317,28 +317,45 @@ def send_message():
         print("Erreur serveur:", e)
         return jsonify({"reply": f"⚠️ Erreur serveur : {e}"}), 500
 
+from flask import request, render_template, redirect, url_for
+from datetime import datetime
+
 @app.route('/feedback', methods=["GET", "POST"])
 def feedback():
+    conn = get_db_connection()
+    cur = conn.cursor()
+
     if request.method == "POST":
         name = request.form.get("name")
         message = request.form.get("message")
-        if name and message:
-            conn = get_db_connection()
-            cur = conn.cursor()
-            cur.execute("INSERT INTO feedback (name, message) VALUES (%s, %s)", (name, message))
+
+        if not name or not message:
+            flash("Both name and message are required.", "error")
+            return redirect(url_for("index"))
+
+        try:
+            cur.execute(
+                "INSERT INTO feedback (name, message) VALUES (%s, %s)",
+                (name, message)
+            )
             conn.commit()
-            cur.close()
-            conn.close()
-            flash("Thanks for your feedback!", "success")
+            flash("✅ Feedback sent successfully!", "success")
+        except Exception as e:
+            conn.rollback()
+            flash(f"Error submitting feedback: {e}", "error")
+
+        cur.close()
+        conn.close()
         return redirect(url_for("index"))
-    else:
-        conn = get_db_connection()
-        cur = conn.cursor()
-        cur.execute("SELECT name, message FROM feedback ORDER BY id DESC")
+
+    else:  # GET method: show feedback list
+        cur.execute("SELECT name, message, submitted_at FROM feedback ORDER BY submitted_at DESC")
         feedbacks = cur.fetchall()
         cur.close()
         conn.close()
-        return render_template("feedback.html", feedbacks=[{"name": f[0], "message": f[1]} for f in feedbacks])
+        return render_template("feedback.html", feedbacks=[
+            {"name": row[0], "message": row[1], "submitted_at": row[2]} for row in feedbacks
+        ])
 
 
 
