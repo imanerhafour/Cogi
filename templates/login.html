@@ -96,20 +96,29 @@
 
 <!-- Form validation + toggle password script -->
 <script>
-  document.addEventListener('DOMContentLoaded', function () {
-    const form = document.querySelector('form');
-    form.addEventListener('submit', function (event) {
-      if (!form.checkValidity()) {
-        event.preventDefault();
-        event.stopPropagation();
-      }
-      form.classList.add('was-validated');
-    });
-  });
+document.addEventListener("DOMContentLoaded", function () {
+  const resetForm = document.querySelector("#resetPasswordModal form");
+  resetForm.addEventListener("submit", function (e) {
+    e.preventDefault();
+    const emailInput = document.getElementById("reset-email");
+    const email = emailInput.value;
 
-  function togglePassword() {
-    const pwd = document.getElementById("password");
-    pwd.type = (pwd.type === "password") ? "text" : "password";
-  }
+    fetch("/reset_request", {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: `email=${encodeURIComponent(email)}`
+    })
+    .then(res => res.json())
+    .then(data => {
+      alert(data.message);
+      if (data.status === "success") {
+        const modal = bootstrap.Modal.getInstance(document.getElementById("resetPasswordModal"));
+        modal.hide();
+      }
+    })
+    .catch(err => alert("Erreur lors de la demande : " + err));
+  });
+});
 </script>
+
 {% endblock %}
