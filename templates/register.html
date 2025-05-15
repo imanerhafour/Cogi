@@ -69,22 +69,24 @@
         </div>
       </div>
 
-      <!-- Show password -->
-      <div class="form-check mt-2 mb-3">
-        <input class="form-check-input" type="checkbox" id="showPassword" onclick="togglePasswordVisibility()">
-        <label class="form-check-label" for="showPassword">Show password</label>
-      </div>
+     
+      <!-- Password -->
+<div class="mb-3">
+  <label for="password" class="form-label">Password</label>
+  <div class="input-group">
+    <span class="input-group-text"><i class="bi bi-lock"></i></span>
+    <input type="password" id="password" name="password" class="form-control" required>
+  </div>
 
-      <!-- Password rules -->
-      <div id="password-requirements" class="text-muted small" style="display: none;">
-        🔒 Your password must contain:
-        <ul>
-          <li id="length" class="invalid">✔️ At least 8 characters</li>
-          <li id="uppercase" class="invalid">✔️ One uppercase letter</li>
-          <li id="number" class="invalid">✔️ One number</li>
-          <li id="special" class="invalid">✔️ One special character</li>
-        </ul>
-      </div>
+  <!-- Password requirements -->
+  <ul id="password-requirements" class="list-unstyled small text-muted mt-2">
+    <li id="length" class="invalid">❌ At least 8 characters</li>
+    <li id="uppercase" class="invalid">❌ One uppercase letter</li>
+    <li id="number" class="invalid">❌ One number</li>
+    <li id="special" class="invalid">❌ One special character</li>
+  </ul>
+</div>
+
 
       <!-- Gender -->
       <div class="mb-3">
@@ -124,34 +126,26 @@
 <script src="https://www.google.com/recaptcha/api.js" async defer></script>
 
 <script>
-function togglePasswordVisibility() {
-  const pwd = document.getElementById("password");
-  const confirm = document.getElementById("confirm");
-  if (pwd) pwd.type = pwd.type === "password" ? "text" : "password";
-  if (confirm) confirm.type = confirm.type === "password" ? "text" : "password";
-}
-
 document.addEventListener('DOMContentLoaded', function () {
   const passwordInput = document.getElementById("password");
   const requirements = document.getElementById("password-requirements");
 
   passwordInput.addEventListener("input", function () {
     const value = passwordInput.value;
-    requirements.style.display = value.length > 0 ? "block" : "none";
 
     document.getElementById("length").className = value.length >= 8 ? "valid" : "invalid";
-    document.getElementById("uppercase").className = /[A-Z]/.test(value) ? "valid" : "invalid";
-    document.getElementById("number").className = /\d/.test(value) ? "valid" : "invalid";
-    document.getElementById("special").className = /[!@#$%^&*(),.?":{}|<>]/.test(value) ? "valid" : "invalid";
-  });
+    document.getElementById("length").textContent = (value.length >= 8 ? "✅" : "❌") + " At least 8 characters";
 
-  const form = document.querySelector('form');
-  form.addEventListener('submit', function (event) {
-    if (!form.checkValidity()) {
-      event.preventDefault();
-      event.stopPropagation();
-    }
-    form.classList.add('was-validated');
+    document.getElementById("uppercase").className = /[A-Z]/.test(value) ? "valid" : "invalid";
+    document.getElementById("uppercase").textContent = /[A-Z]/.test(value) ? "✅ One uppercase letter" : "❌ One uppercase letter";
+
+    document.getElementById("number").className = /\d/.test(value) ? "valid" : "invalid";
+    document.getElementById("number").textContent = /\d/.test(value) ? "✅ One number" : "❌ One number";
+
+    document.getElementById("special").className = /[!@#$%^&*(),.?":{}|<>]/.test(value) ? "valid" : "invalid";
+    document.getElementById("special").textContent = /[!@#$%^&*(),.?":{}|<>]/.test(value)
+      ? "✅ One special character"
+      : "❌ One special character";
   });
 });
 </script>
@@ -160,5 +154,6 @@ document.addEventListener('DOMContentLoaded', function () {
   .valid { color: green; }
   .invalid { color: red; }
 </style>
+
 
 {% endblock %}
