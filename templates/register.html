@@ -48,13 +48,42 @@
         </div>
       </div>
 
-      <div class="mb-3">
-        <label for="password" class="form-label">Password</label>
-        <div class="input-group">
-          <span class="input-group-text"><i class="bi bi-lock"></i></span>
-          <input type="password" id="password" name="password" class="form-control" required>
-        </div>
-      </div>
+      <!-- Mot de passe -->
+<div class="mb-3">
+  <label for="password" class="form-label">Mot de passe</label>
+  <div class="input-group">
+    <span class="input-group-text"><i class="bi bi-lock"></i></span>
+    <input type="password" id="password" name="password" class="form-control" required>
+  </div>
+</div>
+
+<!-- Confirmation -->
+<div class="mb-3">
+  <label for="confirm" class="form-label">Confirmer le mot de passe</label>
+  <div class="input-group">
+    <span class="input-group-text"><i class="bi bi-lock-fill"></i></span>
+    <input type="password" id="confirm" name="confirm" class="form-control" required>
+  </div>
+</div>
+
+<!-- Case à cocher -->
+<div class="form-check mt-2">
+  <input class="form-check-input" type="checkbox" id="showPassword" onclick="togglePasswordVisibility()">
+  <label class="form-check-label" for="showPassword">Afficher le mot de passe</label>
+</div>
+
+<!-- Script JS -->
+<script>
+function togglePasswordVisibility() {
+  const pwd = document.getElementById("password");
+  const confirm = document.getElementById("confirm");
+  if (pwd) pwd.type = pwd.type === "password" ? "text" : "password";
+  if (confirm) confirm.type = confirm.type === "password" ? "text" : "password";
+}
+</script>
+
+
+
 
       <!-- Password rules -->
       <div id="password-requirements" class="text-muted small" style="display: none;">
