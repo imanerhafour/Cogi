@@ -321,10 +321,17 @@ def send_message():
 def feedback():
     name = request.form.get("name")
     message = request.form.get("message")
-    print(f"Feedback from {name}: {message}")  # ou log dans une base / fichier
+
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute("INSERT INTO feedback (name, message) VALUES (%s, %s)", (name, message))
+    conn.commit()
+    cur.close()
+    conn.close()
 
     flash("Thank you for your feedback!", "success")
     return redirect(url_for("index"))
+
 
 
 @app.context_processor
