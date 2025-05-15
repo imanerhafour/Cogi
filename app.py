@@ -3,7 +3,6 @@ from werkzeug.security import check_password_hash, generate_password_hash
 from datetime import timedelta
 from flask_mail import Mail, Message
 from itsdangerous import URLSafeTimedSerializer, SignatureExpired, BadSignature
-import json
 import os
 import requests
 from openai import OpenAI
@@ -11,22 +10,18 @@ from dotenv import load_dotenv
 import re
 import psycopg2
 
-# Charger les variables d'environnement
+# ------------------- Chargement de la configuration -------------------
 load_dotenv()
-
-# Configuration API Together (OpenAI compatible)
-api_key = os.environ.get("TOGETHER_API_KEY", "").strip()
-if not api_key:
-    raise ValueError("TOGETHER_API_KEY is missing")
-
-client = OpenAI(
-    api_key=api_key,
-    base_url="https://api.together.xyz/v1"
-)
 
 app = Flask(__name__)
 app.secret_key = 'supersecretkey'
 app.permanent_session_lifetime = timedelta(minutes=30)
+
+# Config API Together
+api_key = os.environ.get("TOGETHER_API_KEY", "").strip()
+if not api_key:
+    raise ValueError("TOGETHER_API_KEY is missing")
+client = OpenAI(api_key=api_key, base_url="https://api.together.xyz/v1")
 
 # Config Mail
 app.config['MAIL_SERVER'] = 'sandbox.smtp.mailtrap.io'
@@ -37,62 +32,15 @@ app.config['MAIL_PASSWORD'] = os.environ.get("EMAIL_PASS")
 mail = Mail(app)
 
 s = URLSafeTimedSerializer(app.secret_key)
-USERS_FILE = 'users.json'
 MAX_ATTEMPTS = 5
 
-# ---------- Fonctions Utilitaires ----------
-
-def load_users():
-    if not os.path.exists(USERS_FILE):
-        return {}
-    with open(USERS_FILE, 'r') as f:
-        return json.load(f)
-
-def save_users(users):
-    with open(USERS_FILE, 'w') as f:
-        json.dump(users, f, indent=2)
-
-def save_user(data):
-    email = data.get("email", "").lower()  # 🔒 Normaliser l'email
-    conn = get_db_connection()
-    cur = conn.cursor()
-
-    # Vérifier si l'email existe déjà
-    cur.execute("SELECT 1 FROM users WHERE email = %s", (email,))
-    if cur.fetchone():
-        cur.close()
-        conn.close()
-        return False  # Email déjà utilisé
-
-    try:
-        cur.execute("""
-            INSERT INTO users (email, password, first_name, last_name, gender, dob, confirmed, attempts)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
-        """, (
-            email,
-            generate_password_hash(data.get("password"), method='pbkdf2:sha256'),
-            data.get("first_name"),
-            data.get("last_name"),
-            data.get("gender"),
-            data.get("dob") or None,  # ✅ Accepte None si vide
-            False,
-            0
-        ))
-        conn.commit()
-        return True
-    except Exception as e:
-        print("❌ Erreur enregistrement utilisateur :", e)
-        conn.rollback()
-        return False
-    finally:
-        cur.close()
-        conn.close()
-
-
+# ------------------- Fonctions Utilitaires -------------------
 
 def is_strong_password(password):
-    return re.match(r'^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*(),.?\":{}|<>]).{8,}$', password)
+    return re.match(r'^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*(),.?":{}|<>]).{8,}$', password)
 
+def get_db_connection():
+    return psycopg2.connect(dbname="cogi_db", user="mac", password="", host="localhost")
 
 def get_user_by_email(email):
     conn = get_db_connection()
@@ -112,12 +60,55 @@ def get_user_by_email(email):
         }
     return None
 
+def save_user(data):
+    email = data.get("email", "").lower()
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute("SELECT 1 FROM users WHERE email = %s", (email,))
+    if cur.fetchone():
+        cur.close()
+        conn.close()
+        return False
+
+    try:
+        cur.execute("""
+            INSERT INTO users (email, password, first_name, last_name, gender, dob, confirmed, attempts)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+        """, (
+            email,
+            generate_password_hash(data.get("password"), method='pbkdf2:sha256'),
+            data.get("first_name"),
+            data.get("last_name"),
+            data.get("gender"),
+            data.get("dob") or None,
+            False,
+            0
+        ))
+        conn.commit()
+        return True
+    except Exception as e:
+        print("❌ Erreur enregistrement utilisateur :", e)
+        conn.rollback()
+        return False
+    finally:
+        cur.close()
+        conn.close()
+
+def save_message(user_email, message, sender):
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute("""
+        INSERT INTO conversations (user_email, message, sender)
+        VALUES (%s, %s, %s)
+    """, (user_email, message, sender))
+    conn.commit()
+    cur.close()
+    conn.close()
 
 def generate_bot_response(user_message):
     return "Ceci est une réponse automatique (à remplacer par ton modèle IA)"
 
-
-# ---------- Routes principales ----------
+# ------------------- Routes -------------------
 
 @app.route('/')
 def index():
@@ -134,20 +125,12 @@ def chat():
     if request.method == 'POST':
         user_message = request.form['message']
         bot_reply = generate_bot_response(user_message)
-
-        # Sauvegarde dans la base PostgreSQL
         save_message(email, user_message, 'user')
         save_message(email, bot_reply, 'bot')
 
-    # Charger l'historique depuis la base
     conn = get_db_connection()
     cur = conn.cursor()
-    cur.execute("""
-        SELECT message, sender, timestamp
-        FROM conversations
-        WHERE user_email = %s
-        ORDER BY timestamp ASC
-    """, (email,))
+    cur.execute("SELECT message, sender, timestamp FROM conversations WHERE user_email = %s ORDER BY timestamp ASC", (email,))
     history = cur.fetchall()
     cur.close()
     conn.close()
@@ -158,15 +141,11 @@ def chat():
                            last_name=user_data.get("last_name", ""),
                            history=history)
 
-
-
-
 @app.route('/login', methods=["GET", "POST"])
 def login():
     if request.method == "POST":
         username = request.form.get("username")
         password = request.form.get("password")
-
         if not username or not password:
             flash('Username and password are required!', 'error')
             return redirect(url_for("login"))
@@ -176,27 +155,24 @@ def login():
             flash("Unknown user.", "error")
             return redirect(url_for("login"))
 
-        if not user_data.get("confirmed", False):
+        if not user_data.get("confirmed"):
             flash("Please confirm your email before logging in.", "error")
             return redirect(url_for("login"))
 
-        if user_data.get("attempts", 0) >= MAX_ATTEMPTS:
+        if user_data["attempts"] >= MAX_ATTEMPTS:
             flash("Too many failed attempts. Try again later.", "error")
             return redirect(url_for("login"))
 
         if not check_password_hash(user_data["password"], password):
-            # Incrémenter les tentatives
             conn = get_db_connection()
             cur = conn.cursor()
             cur.execute("UPDATE users SET attempts = attempts + 1 WHERE email = %s", (username,))
             conn.commit()
             cur.close()
             conn.close()
-
             flash("Incorrect username or password.", "error")
             return redirect(url_for("login"))
 
-        # Réinitialiser les tentatives
         conn = get_db_connection()
         cur = conn.cursor()
         cur.execute("UPDATE users SET attempts = 0 WHERE email = %s", (username,))
@@ -210,7 +186,6 @@ def login():
 
     return render_template("login.html")
 
-
 @app.route('/register', methods=["GET", "POST"])
 def register():
     if request.method == "POST":
@@ -222,20 +197,10 @@ def register():
             return redirect(url_for("register"))
 
         secret_key = os.environ.get("RECAPTCHA_SECRET")
-        if not secret_key:
-            flash("Configuration CAPTCHA manquante (clé secrète).", "error")
-            return redirect(url_for("register"))
-
         payload = {'secret': secret_key, 'response': recaptcha_response}
-        try:
-            captcha_check = requests.post("https://www.google.com/recaptcha/api/siteverify", data=payload).json()
-            print("CAPTCHA Google Response:", captcha_check)
-        except Exception as e:
-            flash("Erreur lors de la vérification CAPTCHA : " + str(e), "error")
-            return redirect(url_for("register"))
-
+        captcha_check = requests.post("https://www.google.com/recaptcha/api/siteverify", data=payload).json()
         if not captcha_check.get('success'):
-            flash("CAPTCHA verification failed. Code: " + ", ".join(captcha_check.get("error-codes", [])), "error")
+            flash("CAPTCHA verification failed.", "error")
             return redirect(url_for("register"))
 
         if not is_strong_password(form_data["password"]):
@@ -262,14 +227,10 @@ def register():
 def confirm_email(token):
     try:
         email = s.loads(token, salt='email-confirm', max_age=3600)
-    except SignatureExpired:
-        flash("Lien expiré.", "danger")
-        return redirect(url_for("register"))
-    except BadSignature:
-        flash("Lien invalide.", "danger")
+    except (SignatureExpired, BadSignature):
+        flash("Lien invalide ou expiré.", "danger")
         return redirect(url_for("register"))
 
-    # ✅ Mise à jour dans PostgreSQL
     conn = get_db_connection()
     cur = conn.cursor()
     cur.execute("UPDATE users SET confirmed = TRUE WHERE email = %s", (email.lower(),))
@@ -280,11 +241,59 @@ def confirm_email(token):
     flash("Email confirmé. Tu peux te connecter.", "success")
     return redirect(url_for("login"))
 
+@app.route('/reset_request', methods=["POST"])
+def reset_request():
+    email = request.form.get("email")
+    user = get_user_by_email(email)
+    if not user:
+        return jsonify({"status": "error", "message": "Aucun compte associé à cet email."}), 404
 
-@app.route('/logout')
-def logout():
-    session.clear()
-    return redirect(url_for('index'))
+    token = s.dumps(email, salt='reset-password')
+    reset_link = url_for("reset_token", token=token, _external=True)
+
+    msg = Message("Réinitialisation du mot de passe", sender=app.config['MAIL_USERNAME'], recipients=[email])
+    msg.body = f"Clique ici pour réinitialiser ton mot de passe : {reset_link}"
+    try:
+        mail.send(msg)
+        return jsonify({"status": "success", "message": "Lien envoyé à ton adresse email."})
+    except Exception as e:
+        print("Erreur envoi email :", e)
+        return jsonify({"status": "error", "message": "Erreur lors de l'envoi de l'email."}), 500
+
+@app.route('/reset/<token>', methods=["GET", "POST"])
+def reset_token(token):
+    try:
+        email = s.loads(token, salt='reset-password', max_age=3600)
+    except (SignatureExpired, BadSignature):
+        flash("Lien invalide ou expiré.", "danger")
+        return redirect(url_for("login"))
+
+    if request.method == "POST":
+        password = request.form.get("password")
+        confirm = request.form.get("confirm")
+
+        if password != confirm:
+            flash("Les mots de passe ne correspondent pas.", "error")
+            return render_template("reset_token.html", token=token)
+
+        if not is_strong_password(password):
+            flash("Mot de passe trop faible.", "error")
+            return render_template("reset_token.html", token=token)
+
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute("UPDATE users SET password = %s WHERE email = %s", (
+            generate_password_hash(password, method='pbkdf2:sha256'),
+            email
+        ))
+        conn.commit()
+        cur.close()
+        conn.close()
+
+        flash("Mot de passe réinitialisé. Tu peux te connecter.", "success")
+        return redirect(url_for("login"))
+
+    return render_template("reset_token.html", token=token)
 
 @app.route("/send_message", methods=["POST"])
 def send_message():
@@ -302,13 +311,11 @@ def send_message():
             max_tokens=200,
             temperature=0.7,
         )
-
         reply = response.choices[0].message.content.strip()
         return jsonify({"reply": reply})
-
     except Exception as e:
         print("Erreur serveur:", e)
-        return jsonify({"reply": "⚠️ Erreur serveur : " + str(e)}), 500
+        return jsonify({"reply": f"⚠️ Erreur serveur : {e}"}), 500
 
 @app.context_processor
 def inject_user_info():
@@ -322,91 +329,10 @@ def inject_user_info():
             }
     return {'first_name': '', 'last_name': ''}
 
-@app.route('/reset_request', methods=["POST"])
-def reset_request():
-    email = request.form.get("email")
-    user = get_user_by_email(email)
-
-    if not user:
-        return jsonify({"status": "error", "message": "Aucun compte associé à cet email."}), 404
-
-    token = s.dumps(email, salt='reset-password')
-    reset_link = url_for("reset_token", token=token, _external=True)
-
-    try:
-        msg = Message("Réinitialisation du mot de passe",
-                      sender=app.config['MAIL_USERNAME'],
-                      recipients=[email])
-        msg.body = f"Clique ici pour réinitialiser ton mot de passe : {reset_link}"
-        mail.send(msg)
-        return jsonify({"status": "success", "message": "Lien envoyé à ton adresse email."})
-    except Exception as e:
-        print("Erreur envoi email :", e)
-        return jsonify({"status": "error", "message": "Erreur lors de l'envoi de l'email."}), 500
-
-
-@app.route('/reset/<token>', methods=["GET", "POST"])
-def reset_token(token):
-    try:
-        email = s.loads(token, salt='reset-password', max_age=3600)
-    except SignatureExpired:
-        flash("Le lien a expiré.", "danger")
-        return redirect(url_for("login"))
-    except BadSignature:
-        flash("Lien invalide.", "danger")
-        return redirect(url_for("login"))
-
-    if request.method == "POST":
-        password = request.form.get("password")
-        confirm = request.form.get("confirm")
-
-        if password != confirm:
-            flash("Les mots de passe ne correspondent pas.", "error")
-            return render_template("reset_token.html", token=token)
-
-        if not is_strong_password(password):
-            flash("Mot de passe trop faible.", "error")
-            return render_template("reset_token.html", token=token)
-
-        # ✅ Mettre à jour dans PostgreSQL
-        conn = get_db_connection()
-        cur = conn.cursor()
-        cur.execute("UPDATE users SET password = %s WHERE email = %s", (
-            generate_password_hash(password, method='pbkdf2:sha256'),
-            email
-        ))
-        conn.commit()
-        cur.close()
-        conn.close()
-
-        flash("Mot de passe réinitialisé. Tu peux te connecter.", "success")
-        return redirect(url_for("login"))
-
-    return render_template("reset_token.html", token=token)
-
-
-
-# ---------- Migration vers  de  PostgreSQL----------
-def get_db_connection():
-    return psycopg2.connect(
-        dbname="cogi_db",
-        user="mac",  
-        password="", 
-        host="localhost"
-    )
-
-# ---------- Sauvegarde de l'historique des chats  ----------
-def save_message(user_email, message, sender):
-    conn = get_db_connection()
-    cur = conn.cursor()
-    cur.execute("""
-        INSERT INTO conversations (user_email, message, sender)
-        VALUES (%s, %s, %s)
-    """, (user_email, message, sender))
-    conn.commit()
-    cur.close()
-    conn.close()
-
+@app.route('/logout')
+def logout():
+    session.clear()
+    return redirect(url_for('index'))
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000, debug=True)
