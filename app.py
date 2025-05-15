@@ -322,30 +322,28 @@ def inject_user_info():
             }
     return {'first_name': '', 'last_name': ''}
 
-
-@app.route('/reset_request', methods=["GET", "POST"])
+@app.route('/reset_request', methods=["POST"])
 def reset_request():
-    if request.method == "POST":
-        email = request.form.get("email")
-        users = load_users()
+    email = request.form.get("email")
+    user = get_user_by_email(email)
 
-        if not email or email not in users:
-            flash("Aucun compte associé à cet email.", "error")
-            return redirect(url_for("reset_request"))
+    if not user:
+        return jsonify({"status": "error", "message": "Aucun compte associé à cet email."}), 404
 
-        token = s.dumps(email, salt='reset-password')
-        reset_link = url_for("reset_token", token=token, _external=True)
+    token = s.dumps(email, salt='reset-password')
+    reset_link = url_for("reset_token", token=token, _external=True)
 
-        msg = Message("Réinitialisation de mot de passe",
+    try:
+        msg = Message("Réinitialisation du mot de passe",
                       sender=app.config['MAIL_USERNAME'],
                       recipients=[email])
         msg.body = f"Clique ici pour réinitialiser ton mot de passe : {reset_link}"
         mail.send(msg)
+        return jsonify({"status": "success", "message": "Lien envoyé à ton adresse email."})
+    except Exception as e:
+        print("Erreur envoi email :", e)
+        return jsonify({"status": "error", "message": "Erreur lors de l'envoi de l'email."}), 500
 
-        flash("Un lien de réinitialisation a été envoyé à ton adresse email.", "success")
-        return redirect(url_for("login"))
-
-    return render_template("reset_request.html")
 
 @app.route('/reset/<token>', methods=["GET", "POST"])
 def reset_token(token):
