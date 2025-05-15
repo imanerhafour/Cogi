@@ -24,6 +24,7 @@
 
     <!-- Registration form -->
     <form method="POST" class="needs-validation" novalidate>
+      <!-- First name -->
       <div class="mb-3">
         <label for="first_name" class="form-label">First Name</label>
         <div class="input-group">
@@ -32,6 +33,7 @@
         </div>
       </div>
 
+      <!-- Last name -->
       <div class="mb-3">
         <label for="last_name" class="form-label">Last Name</label>
         <div class="input-group">
@@ -40,6 +42,7 @@
         </div>
       </div>
 
+      <!-- Email -->
       <div class="mb-3">
         <label for="email" class="form-label">Email</label>
         <div class="input-group">
@@ -48,46 +51,33 @@
         </div>
       </div>
 
-      <!-- Mot de passe -->
-<div class="mb-3">
-  <label for="password" class="form-label">Mot de passe</label>
-  <div class="input-group">
-    <span class="input-group-text"><i class="bi bi-lock"></i></span>
-    <input type="password" id="password" name="password" class="form-control" required>
-  </div>
-</div>
+      <!-- Password -->
+      <div class="mb-3">
+        <label for="password" class="form-label">Password</label>
+        <div class="input-group">
+          <span class="input-group-text"><i class="bi bi-lock"></i></span>
+          <input type="password" id="password" name="password" class="form-control" required>
+        </div>
+      </div>
 
-<!-- Confirmation -->
-<div class="mb-3">
-  <label for="confirm" class="form-label">Confirmer le mot de passe</label>
-  <div class="input-group">
-    <span class="input-group-text"><i class="bi bi-lock-fill"></i></span>
-    <input type="password" id="confirm" name="confirm" class="form-control" required>
-  </div>
-</div>
+      <!-- Confirm password -->
+      <div class="mb-3">
+        <label for="confirm" class="form-label">Confirm Password</label>
+        <div class="input-group">
+          <span class="input-group-text"><i class="bi bi-lock-fill"></i></span>
+          <input type="password" id="confirm" name="confirm" class="form-control" required>
+        </div>
+      </div>
 
-<!-- Case à cocher -->
-<div class="form-check mt-2">
-  <input class="form-check-input" type="checkbox" id="showPassword" onclick="togglePasswordVisibility()">
-  <label class="form-check-label" for="showPassword">Afficher le mot de passe</label>
-</div>
-
-<!-- Script JS -->
-<script>
-function togglePasswordVisibility() {
-  const pwd = document.getElementById("password");
-  const confirm = document.getElementById("confirm");
-  if (pwd) pwd.type = pwd.type === "password" ? "text" : "password";
-  if (confirm) confirm.type = confirm.type === "password" ? "text" : "password";
-}
-</script>
-
-
-
+      <!-- Show password -->
+      <div class="form-check mt-2 mb-3">
+        <input class="form-check-input" type="checkbox" id="showPassword" onclick="togglePasswordVisibility()">
+        <label class="form-check-label" for="showPassword">Show password</label>
+      </div>
 
       <!-- Password rules -->
       <div id="password-requirements" class="text-muted small" style="display: none;">
-        🔒 Password must contain:
+        🔒 Your password must contain:
         <ul>
           <li id="length" class="invalid">✔️ At least 8 characters</li>
           <li id="uppercase" class="invalid">✔️ One uppercase letter</li>
@@ -96,6 +86,7 @@ function togglePasswordVisibility() {
         </ul>
       </div>
 
+      <!-- Gender -->
       <div class="mb-3">
         <label for="gender" class="form-label">Gender</label>
         <select id="gender" name="gender" class="form-select" required>
@@ -106,6 +97,7 @@ function togglePasswordVisibility() {
         </select>
       </div>
 
+      <!-- Date of Birth -->
       <div class="mb-3">
         <label for="dob" class="form-label">Date of Birth</label>
         <input type="date" id="dob" name="dob" class="form-control" required>
@@ -116,6 +108,7 @@ function togglePasswordVisibility() {
         <div class="g-recaptcha" data-sitekey="6LdeuTgrAAAAALgMB51O8sdVEWPG6TFDGGJvSRpm"></div>
       </div>
 
+      <!-- Submit -->
       <button type="submit" class="btn btn-success w-100 py-2">
         <i class="bi bi-box-arrow-in-right"></i> Sign Up
       </button>
@@ -131,6 +124,13 @@ function togglePasswordVisibility() {
 <script src="https://www.google.com/recaptcha/api.js" async defer></script>
 
 <script>
+function togglePasswordVisibility() {
+  const pwd = document.getElementById("password");
+  const confirm = document.getElementById("confirm");
+  if (pwd) pwd.type = pwd.type === "password" ? "text" : "password";
+  if (confirm) confirm.type = confirm.type === "password" ? "text" : "password";
+}
+
 document.addEventListener('DOMContentLoaded', function () {
   const passwordInput = document.getElementById("password");
   const requirements = document.getElementById("password-requirements");
@@ -142,7 +142,7 @@ document.addEventListener('DOMContentLoaded', function () {
     document.getElementById("length").className = value.length >= 8 ? "valid" : "invalid";
     document.getElementById("uppercase").className = /[A-Z]/.test(value) ? "valid" : "invalid";
     document.getElementById("number").className = /\d/.test(value) ? "valid" : "invalid";
-    document.getElementById("special").className = /[!@#$%^&*(),.?\":{}|<>]/.test(value) ? "valid" : "invalid";
+    document.getElementById("special").className = /[!@#$%^&*(),.?":{}|<>]/.test(value) ? "valid" : "invalid";
   });
 
   const form = document.querySelector('form');
