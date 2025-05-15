@@ -22,7 +22,6 @@
       {% endif %}
     {% endwith %}
 
-    <!-- Registration form -->
     <form method="POST" class="needs-validation" novalidate>
       <!-- First name -->
       <div class="mb-3">
@@ -60,7 +59,7 @@
         </div>
       </div>
 
-      <!-- Confirm password -->
+      <!-- Confirm Password -->
       <div class="mb-3">
         <label for="confirm" class="form-label">Confirm Password</label>
         <div class="input-group">
@@ -69,24 +68,21 @@
         </div>
       </div>
 
-     
-      <!-- Password -->
-<div class="mb-3">
-  <label for="password" class="form-label">Password</label>
-  <div class="input-group">
-    <span class="input-group-text"><i class="bi bi-lock"></i></span>
-    <input type="password" id="password" name="password" class="form-control" required>
-  </div>
+      <!-- Show password -->
+      <div class="form-check mb-3">
+        <input class="form-check-input" type="checkbox" id="showPassword" onclick="togglePasswordVisibility()">
+        <label class="form-check-label" for="showPassword">
+          Show password
+        </label>
+      </div>
 
-  <!-- Password requirements -->
-  <ul id="password-requirements" class="list-unstyled small text-muted mt-2">
-    <li id="length" class="invalid">❌ At least 8 characters</li>
-    <li id="uppercase" class="invalid">❌ One uppercase letter</li>
-    <li id="number" class="invalid">❌ One number</li>
-    <li id="special" class="invalid">❌ One special character</li>
-  </ul>
-</div>
-
+      <!-- Password rules -->
+      <ul id="password-requirements" class="list-unstyled small text-muted mb-3">
+        <li id="length" class="invalid">❌ At least 8 characters</li>
+        <li id="uppercase" class="invalid">❌ One uppercase letter</li>
+        <li id="number" class="invalid">❌ One number</li>
+        <li id="special" class="invalid">❌ One special character</li>
+      </ul>
 
       <!-- Gender -->
       <div class="mb-3">
@@ -99,13 +95,13 @@
         </select>
       </div>
 
-      <!-- Date of Birth -->
+      <!-- Date of birth -->
       <div class="mb-3">
         <label for="dob" class="form-label">Date of Birth</label>
         <input type="date" id="dob" name="dob" class="form-control" required>
       </div>
 
-      <!-- Google reCAPTCHA -->
+      <!-- reCAPTCHA -->
       <div class="mb-3">
         <div class="g-recaptcha" data-sitekey="6LdeuTgrAAAAALgMB51O8sdVEWPG6TFDGGJvSRpm"></div>
       </div>
@@ -122,38 +118,56 @@
   </div>
 </div>
 
-<!-- Scripts -->
+<!-- JS -->
 <script src="https://www.google.com/recaptcha/api.js" async defer></script>
 
 <script>
-document.addEventListener('DOMContentLoaded', function () {
-  const passwordInput = document.getElementById("password");
-  const requirements = document.getElementById("password-requirements");
+  // Toggle password visibility
+  function togglePasswordVisibility() {
+    const pwd = document.getElementById("password");
+    const confirm = document.getElementById("confirm");
+    if (pwd) pwd.type = pwd.type === "password" ? "text" : "password";
+    if (confirm) confirm.type = confirm.type === "password" ? "text" : "password";
+  }
 
-  passwordInput.addEventListener("input", function () {
-    const value = passwordInput.value;
+  // Password strength check
+  document.addEventListener('DOMContentLoaded', function () {
+    const passwordInput = document.getElementById("password");
 
-    document.getElementById("length").className = value.length >= 8 ? "valid" : "invalid";
-    document.getElementById("length").textContent = (value.length >= 8 ? "✅" : "❌") + " At least 8 characters";
+    passwordInput.addEventListener("input", function () {
+      const value = passwordInput.value;
 
-    document.getElementById("uppercase").className = /[A-Z]/.test(value) ? "valid" : "invalid";
-    document.getElementById("uppercase").textContent = /[A-Z]/.test(value) ? "✅ One uppercase letter" : "❌ One uppercase letter";
+      const updateRule = (id, condition) => {
+        const item = document.getElementById(id);
+        if (condition) {
+          item.className = "valid";
+          item.textContent = "✅ " + item.textContent.slice(2);
+        } else {
+          item.className = "invalid";
+          item.textContent = "❌ " + item.textContent.slice(2);
+        }
+      };
 
-    document.getElementById("number").className = /\d/.test(value) ? "valid" : "invalid";
-    document.getElementById("number").textContent = /\d/.test(value) ? "✅ One number" : "❌ One number";
+      updateRule("length", value.length >= 8);
+      updateRule("uppercase", /[A-Z]/.test(value));
+      updateRule("number", /\d/.test(value));
+      updateRule("special", /[!@#$%^&*(),.?":{}|<>]/.test(value));
+    });
 
-    document.getElementById("special").className = /[!@#$%^&*(),.?":{}|<>]/.test(value) ? "valid" : "invalid";
-    document.getElementById("special").textContent = /[!@#$%^&*(),.?":{}|<>]/.test(value)
-      ? "✅ One special character"
-      : "❌ One special character";
+    // HTML5 validation
+    const form = document.querySelector("form");
+    form.addEventListener("submit", function (event) {
+      if (!form.checkValidity()) {
+        event.preventDefault();
+        event.stopPropagation();
+      }
+      form.classList.add("was-validated");
+    });
   });
-});
 </script>
 
 <style>
   .valid { color: green; }
   .invalid { color: red; }
 </style>
-
-
 {% endblock %}
