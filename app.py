@@ -351,10 +351,10 @@ def reset_token(token):
         email = s.loads(token, salt='reset-password', max_age=3600)
     except SignatureExpired:
         flash("Le lien a expiré.", "danger")
-        return redirect(url_for("reset_request"))
+        return redirect(url_for("login"))
     except BadSignature:
-        flash("Lien invalide ou modifié.", "danger")
-        return redirect(url_for("reset_request"))
+        flash("Lien invalide.", "danger")
+        return redirect(url_for("login"))
 
     if request.method == "POST":
         password = request.form.get("password")
@@ -368,14 +368,22 @@ def reset_token(token):
             flash("Mot de passe trop faible.", "error")
             return render_template("reset_token.html", token=token)
 
-        users = load_users()
-        users[email]["password"] = generate_password_hash(password, method='pbkdf2:sha256')
-        save_users(users)
+        # ✅ Mettre à jour dans PostgreSQL
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute("UPDATE users SET password = %s WHERE email = %s", (
+            generate_password_hash(password, method='pbkdf2:sha256'),
+            email
+        ))
+        conn.commit()
+        cur.close()
+        conn.close()
 
         flash("Mot de passe réinitialisé. Tu peux te connecter.", "success")
         return redirect(url_for("login"))
 
     return render_template("reset_token.html", token=token)
+
 
 
 # ---------- Migration vers  de  PostgreSQL----------
