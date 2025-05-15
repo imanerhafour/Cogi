@@ -317,6 +317,16 @@ def send_message():
         print("Erreur serveur:", e)
         return jsonify({"reply": f"⚠️ Erreur serveur : {e}"}), 500
 
+@app.route("/feedback", methods=["POST"])
+def feedback():
+    name = request.form.get("name")
+    message = request.form.get("message")
+    print(f"Feedback from {name}: {message}")  # ou log dans une base / fichier
+
+    flash("Thank you for your feedback!", "success")
+    return redirect(url_for("index"))
+
+
 @app.context_processor
 def inject_user_info():
     if 'user' in session:
