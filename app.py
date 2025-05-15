@@ -317,20 +317,30 @@ def send_message():
         print("Erreur serveur:", e)
         return jsonify({"reply": f"⚠️ Erreur serveur : {e}"}), 500
 
-@app.route("/feedback", methods=["POST"])
+@app.route('/feedback', methods=["GET", "POST"])
 def feedback():
-    name = request.form.get("name")
-    message = request.form.get("message")
+    if request.method == "POST":
+        name = request.form.get("name")
+        message = request.form.get("message")
+        if name and message:
+            conn = get_db_connection()
+            cur = conn.cursor()
+            cur.execute("INSERT INTO feedback (name, message) VALUES (%s, %s)", (name, message))
+            conn.commit()
+            cur.close()
+            conn.close()
+            flash("Thanks for your feedback!", "success")
+        return redirect(url_for("index"))
+    else:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute("SELECT name, message FROM feedback ORDER BY id DESC")
+        feedbacks = cur.fetchall()
+        cur.close()
+        conn.close()
+        return render_template("feedback.html", feedbacks=[{"name": f[0], "message": f[1]} for f in feedbacks])
 
-    conn = get_db_connection()
-    cur = conn.cursor()
-    cur.execute("INSERT INTO feedback (name, message) VALUES (%s, %s)", (name, message))
-    conn.commit()
-    cur.close()
-    conn.close()
 
-    flash("Thank you for your feedback!", "success")
-    return redirect(url_for("index"))
 
 
 
