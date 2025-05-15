@@ -126,6 +126,7 @@ def chat():
     if request.method == 'POST':
         user_message = request.form['message']
         bot_reply = generate_bot_response(user_message)
+        # ⬇️ Enregistre les deux messages dans la base
         save_message(email, user_message, 'user')
         save_message(email, bot_reply, 'bot')
 
