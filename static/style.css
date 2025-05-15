@@ -3374,3 +3374,18 @@ footer p {
   color: #dc3545;
   font-weight: bold;
 }
+
+.btn-outline-peace {
+  color: #3c7a6d;
+  border: 2px solid #3c7a6d;
+  background-color: transparent;
+  transition: all 0.3s ease;
+  font-weight: 500;
+  padding: 10px 24px;
+  border-radius: 30px;
+}
+
+.btn-outline-peace:hover {
+  background-color: #3c7a6d;
+  color: #fff;
+}
