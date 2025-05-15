@@ -18,11 +18,12 @@
   {% endwith %}
 
   <form method="POST" class="needs-validation" novalidate>
+    <!-- New password -->
     <div class="mb-3">
       <label for="password" class="form-label">New password</label>
-      <input type="password" id="password" name="password" class="form-control" required
-             onkeyup="checkPasswordStrength()"
-             pattern="(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*(),.?&quot;:{}|&lt;&gt;]).{8,}">
+      <input type="password" id="password" name="password" class="form-control" required onkeyup="checkPasswordStrength()"
+        pattern="(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[!@#$%^&*(),.?\":{}|<>]).{8,}">
+
       <ul class="list-unstyled mt-2">
         <li id="length" class="text-danger">❌ At least 8 characters</li>
         <li id="uppercase" class="text-danger">❌ One uppercase letter</li>
@@ -32,12 +33,13 @@
       </ul>
     </div>
 
+    <!-- Confirm password -->
     <div class="mb-3">
       <label for="confirm" class="form-label">Confirm password</label>
       <input type="password" id="confirm" name="confirm" class="form-control" required>
     </div>
 
-    <!-- ✅ Show password checkbox -->
+    <!-- Show password toggle -->
     <div class="form-check mt-2 mb-3">
       <input class="form-check-input" type="checkbox" id="showPassword" onclick="togglePasswordVisibility()">
       <label class="form-check-label" for="showPassword">Show password</label>
@@ -49,40 +51,32 @@
   </form>
 </div>
 
-<!-- ✅ Scripts -->
+<!-- JS -->
 <script>
   function checkPasswordStrength() {
     const password = document.getElementById('password').value;
 
-    const length = document.getElementById('length');
-    const uppercase = document.getElementById('uppercase');
-    const lowercase = document.getElementById('lowercase');
-    const digit = document.getElementById('digit');
-    const special = document.getElementById('special');
+    const rules = {
+      length: password.length >= 8,
+      uppercase: /[A-Z]/.test(password),
+      lowercase: /[a-z]/.test(password),
+      digit: /[0-9]/.test(password),
+      special: /[!@#$%^&*(),.?":{}|<>]/.test(password),
+    };
 
-    length.className = password.length >= 8 ? 'text-success' : 'text-danger';
-    length.textContent = password.length >= 8 ? '✅ At least 8 characters' : '❌ At least 8 characters';
-
-    uppercase.className = /[A-Z]/.test(password) ? 'text-success' : 'text-danger';
-    uppercase.textContent = /[A-Z]/.test(password) ? '✅ One uppercase letter' : '❌ One uppercase letter';
-
-    lowercase.className = /[a-z]/.test(password) ? 'text-success' : 'text-danger';
-    lowercase.textContent = /[a-z]/.test(password) ? '✅ One lowercase letter' : '❌ One lowercase letter';
-
-    digit.className = /[0-9]/.test(password) ? 'text-success' : 'text-danger';
-    digit.textContent = /[0-9]/.test(password) ? '✅ One digit' : '❌ One digit';
-
-    special.className = /[!@#$%^&*(),.?":{}|<>]/.test(password) ? 'text-success' : 'text-danger';
-    special.textContent = /[!@#$%^&*(),.?":{}|<>]/.test(password)
-      ? '✅ One special character'
-      : '❌ One special character';
+    for (const rule in rules) {
+      const element = document.getElementById(rule);
+      element.className = rules[rule] ? 'text-success' : 'text-danger';
+      element.textContent = (rules[rule] ? '✅' : '❌') + ' ' + element.textContent.slice(2);
+    }
   }
 
   function togglePasswordVisibility() {
-    const pwd = document.getElementById("password");
-    const confirm = document.getElementById("confirm");
-    if (pwd) pwd.type = pwd.type === "password" ? "text" : "password";
-    if (confirm) confirm.type = confirm.type === "password" ? "text" : "password";
+    const fields = ["password", "confirm"];
+    fields.forEach(id => {
+      const input = document.getElementById(id);
+      if (input) input.type = input.type === "password" ? "text" : "password";
+    });
   }
 
   document.addEventListener('DOMContentLoaded', function () {
