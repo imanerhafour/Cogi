@@ -269,12 +269,17 @@ def confirm_email(token):
         flash("Lien invalide.", "danger")
         return redirect(url_for("register"))
 
-    users = load_users()
-    if email in users:
-        users[email]["confirmed"] = True
-        save_users(users)
-        flash("Email confirmé. Tu peux te connecter.", "success")
+    # ✅ Mise à jour dans PostgreSQL
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute("UPDATE users SET confirmed = TRUE WHERE email = %s", (email.lower(),))
+    conn.commit()
+    cur.close()
+    conn.close()
+
+    flash("Email confirmé. Tu peux te connecter.", "success")
     return redirect(url_for("login"))
+
 
 @app.route('/logout')
 def logout():
