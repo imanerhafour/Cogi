@@ -105,6 +105,7 @@ def save_message(user_email, message, sender):
     cur.close()
     conn.close()
 
+
 def generate_bot_response(user_message):
     return "Ceci est une réponse automatique (à remplacer par ton modèle IA)"
 
