@@ -132,20 +132,22 @@
    
   </div>
 </section>
+
 <div class="feedback-form">
   <h2>Share Your Feedback</h2>
   <p class="feedback-description">We'd love to hear from you! Please write your feedback below 👋</p>
   
-  <form>
+  <form action="/feedback" method="POST">
     <label for="name">Your Name</label>
-    <input type="text" id="name" placeholder="e.g. Sarah">
+    <input type="text" id="name" name="name" placeholder="e.g. Sarah">
     
     <label for="feedback">Your Feedback</label>
-    <textarea id="feedback" placeholder="What do you think about our platform?"></textarea>
+    <textarea id="feedback" name="message" placeholder="What do you think about our platform?"></textarea>
     
     <button type="submit">☮️ Send Feedback</button>
   </form>
 </div>
+
 
     
 
