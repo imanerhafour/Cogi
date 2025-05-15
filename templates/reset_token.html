@@ -1,11 +1,11 @@
 {% extends 'base.html' %}
 
-{% block title %}Réinitialiser le mot de passe{% endblock %}
+{% block title %}Reset your password{% endblock %}
 
 {% block content %}
 <div class="container mt-5">
-  <h2 class="text-center">🔐 Nouveau mot de passe</h2>
-  <p class="text-muted text-center">Crée un mot de passe fort pour sécuriser ton compte.</p>
+  <h2 class="text-center">🔐 Create a new password</h2>
+  <p class="text-muted text-center">Choose a strong password to secure your account.</p>
 
   {% with messages = get_flashed_messages(with_categories=true) %}
     {% if messages %}
@@ -19,31 +19,37 @@
 
   <form method="POST" class="needs-validation" novalidate>
     <div class="mb-3">
-      <label for="password" class="form-label">Nouveau mot de passe</label>
+      <label for="password" class="form-label">New password</label>
       <input type="password" id="password" name="password" class="form-control" required
              onkeyup="checkPasswordStrength()"
-            pattern="(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*(),.?&quot;:{}|&lt;&gt;]).{8,}"
+             pattern="(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*(),.?&quot;:{}|&lt;&gt;]).{8,}">
       <ul class="list-unstyled mt-2">
-        <li id="length" class="text-danger">❌ Minimum 8 caractères</li>
-        <li id="uppercase" class="text-danger">❌ Une majuscule</li>
-        <li id="lowercase" class="text-danger">❌ Une minuscule</li>
-        <li id="digit" class="text-danger">❌ Un chiffre</li>
-        <li id="special" class="text-danger">❌ Un caractère spécial</li>
+        <li id="length" class="text-danger">❌ At least 8 characters</li>
+        <li id="uppercase" class="text-danger">❌ One uppercase letter</li>
+        <li id="lowercase" class="text-danger">❌ One lowercase letter</li>
+        <li id="digit" class="text-danger">❌ One digit</li>
+        <li id="special" class="text-danger">❌ One special character</li>
       </ul>
     </div>
 
     <div class="mb-3">
-      <label for="confirm" class="form-label">Confirmer le mot de passe</label>
+      <label for="confirm" class="form-label">Confirm password</label>
       <input type="password" id="confirm" name="confirm" class="form-control" required>
     </div>
 
+    <!-- ✅ Show password checkbox -->
+    <div class="form-check mt-2 mb-3">
+      <input class="form-check-input" type="checkbox" id="showPassword" onclick="togglePasswordVisibility()">
+      <label class="form-check-label" for="showPassword">Show password</label>
+    </div>
+
     <div class="d-grid">
-      <button type="submit" class="btn btn-success">🔁 Réinitialiser</button>
+      <button type="submit" class="btn btn-success">🔁 Reset password</button>
     </div>
   </form>
 </div>
 
-<!-- JS de validation -->
+<!-- ✅ Scripts -->
 <script>
   function checkPasswordStrength() {
     const password = document.getElementById('password').value;
@@ -55,25 +61,30 @@
     const special = document.getElementById('special');
 
     length.className = password.length >= 8 ? 'text-success' : 'text-danger';
-    length.textContent = password.length >= 8 ? '✅ Minimum 8 caractères' : '❌ Minimum 8 caractères';
+    length.textContent = password.length >= 8 ? '✅ At least 8 characters' : '❌ At least 8 characters';
 
     uppercase.className = /[A-Z]/.test(password) ? 'text-success' : 'text-danger';
-    uppercase.textContent = /[A-Z]/.test(password) ? '✅ Une majuscule' : '❌ Une majuscule';
+    uppercase.textContent = /[A-Z]/.test(password) ? '✅ One uppercase letter' : '❌ One uppercase letter';
 
     lowercase.className = /[a-z]/.test(password) ? 'text-success' : 'text-danger';
-    lowercase.textContent = /[a-z]/.test(password) ? '✅ Une minuscule' : '❌ Une minuscule';
+    lowercase.textContent = /[a-z]/.test(password) ? '✅ One lowercase letter' : '❌ One lowercase letter';
 
     digit.className = /[0-9]/.test(password) ? 'text-success' : 'text-danger';
-    digit.textContent = /[0-9]/.test(password) ? '✅ Un chiffre' : '❌ Un chiffre';
+    digit.textContent = /[0-9]/.test(password) ? '✅ One digit' : '❌ One digit';
 
-    // ⚠️ Correction ici : détecter tous les caractères spéciaux que tu acceptes
     special.className = /[!@#$%^&*(),.?":{}|<>]/.test(password) ? 'text-success' : 'text-danger';
     special.textContent = /[!@#$%^&*(),.?":{}|<>]/.test(password)
-      ? '✅ Un caractère spécial'
-      : '❌ Un caractère spécial';
+      ? '✅ One special character'
+      : '❌ One special character';
   }
 
-  // Validation HTML5 visuelle
+  function togglePasswordVisibility() {
+    const pwd = document.getElementById("password");
+    const confirm = document.getElementById("confirm");
+    if (pwd) pwd.type = pwd.type === "password" ? "text" : "password";
+    if (confirm) confirm.type = confirm.type === "password" ? "text" : "password";
+  }
+
   document.addEventListener('DOMContentLoaded', function () {
     const form = document.querySelector('form');
     form.addEventListener('submit', function (event) {
@@ -85,5 +96,4 @@
     });
   });
 </script>
-
 {% endblock %}
