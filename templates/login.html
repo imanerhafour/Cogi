@@ -56,7 +56,7 @@
           Forgot password?
         </a>
       </div>
-    </form> <!-- ✅ Fin du formulaire principal -->
+    </form>
 
     <!-- Back to home -->
     <div class="text-center mt-4">
@@ -70,7 +70,7 @@
   <a href="/register" class="text-decoration-none">Don't have an account? Sign up</a>
 </div>
 
-<!-- ✅ Password reset modal : EN DEHORS du <form> principal -->
+<!-- ✅ Password reset modal -->
 <div class="modal fade" id="resetPasswordModal" tabindex="-1" aria-labelledby="resetPasswordModalLabel" aria-hidden="true">
   <div class="modal-dialog">
     <form id="resetForm" method="POST">
@@ -93,39 +93,45 @@
   </div>
 </div>
 
-
-<!-- Form validation + toggle password script -->
+<!-- JS scripts -->
 <script>
-document.addEventListener("DOMContentLoaded", function () {
-  const resetForm = document.getElementById("resetForm");
-  const resetEmail = document.getElementById("reset-email");
-  const resetMessage = document.getElementById("resetMessage");
+  document.addEventListener("DOMContentLoaded", function () {
+    // Reset modal form handler
+    const resetForm = document.getElementById("resetForm");
+    const resetEmail = document.getElementById("reset-email");
+    const resetMessage = document.getElementById("resetMessage");
 
-  resetForm.addEventListener("submit", function (e) {
-    e.preventDefault();
-    resetMessage.innerHTML = "";
+    resetForm.addEventListener("submit", function (e) {
+      e.preventDefault();
+      resetMessage.innerHTML = "";
 
-    fetch("/reset_request", {
-      method: "POST",
-      headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      body: `email=${encodeURIComponent(resetEmail.value)}`
-    })
-    .then(res => res.json())
-    .then(data => {
-      resetMessage.className = `alert ${data.status === "success" ? "alert-success" : "alert-danger"}`;
-      resetMessage.innerText = data.message;
+      fetch("/reset_request", {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: `email=${encodeURIComponent(resetEmail.value)}`
+      })
+      .then(res => res.json())
+      .then(data => {
+        resetMessage.className = `alert ${data.status === "success" ? "alert-success" : "alert-danger"}`;
+        resetMessage.innerText = data.message;
 
-      if (data.status === "success") {
-        setTimeout(() => {
-          bootstrap.Modal.getInstance(document.getElementById("resetPasswordModal")).hide();
-          resetForm.reset();
-          resetMessage.innerHTML = "";
-        }, 3000);
-      }
+        if (data.status === "success") {
+          setTimeout(() => {
+            bootstrap.Modal.getInstance(document.getElementById("resetPasswordModal")).hide();
+            resetForm.reset();
+            resetMessage.innerHTML = "";
+          }, 3000);
+        }
+      });
     });
   });
-});
+
+  // ✅ Show/hide password toggle
+  function togglePassword() {
+    const passwordInput = document.getElementById("password");
+    if (passwordInput) {
+      passwordInput.type = passwordInput.type === "password" ? "text" : "password";
+    }
+  }
 </script>
-
-
 {% endblock %}
