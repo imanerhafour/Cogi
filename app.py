@@ -9,6 +9,7 @@ from openai import OpenAI
 from dotenv import load_dotenv
 import re
 import psycopg2
+import uuid
 
 # ------------------- Chargement de la configuration -------------------
 load_dotenv()
@@ -94,16 +95,17 @@ def save_user(data):
         cur.close()
         conn.close()
 
-def save_message(user_email, message, sender):
+def save_message(email, message, sender, session_id):
     conn = get_db_connection()
     cur = conn.cursor()
     cur.execute("""
-        INSERT INTO conversations (user_email, message, sender)
-        VALUES (%s, %s, %s)
-    """, (user_email, message, sender))
+        INSERT INTO conversations (user_email, message, sender, session_id)
+        VALUES (%s, %s, %s, %s)
+    """, (email, message, sender, session_id))
     conn.commit()
     cur.close()
     conn.close()
+
 
 
 def generate_bot_response(user_message):
@@ -115,6 +117,8 @@ def generate_bot_response(user_message):
 def index():
     return render_template('index.html')
 
+
+
 @app.route('/chat', methods=['GET', 'POST'])
 def chat():
     if "user" not in session:
@@ -123,16 +127,29 @@ def chat():
     email = session["user"]
     user_data = get_user_by_email(email)
 
+    # 🆕 Gérer l'ID de session pour la conversation
+    if "session_id" not in session or request.args.get("new"):
+        session["session_id"] = str(uuid.uuid4())
+
+    current_session_id = session["session_id"]
+
     if request.method == 'POST':
         user_message = request.form['message']
         bot_reply = generate_bot_response(user_message)
-        # ⬇️ Enregistre les deux messages dans la base
-        save_message(email, user_message, 'user')
-        save_message(email, bot_reply, 'bot')
 
+        # 💾 Sauvegarde du message utilisateur et bot avec session_id
+        save_message(email, user_message, 'user', current_session_id)
+        save_message(email, bot_reply, 'bot', current_session_id)
+
+    # 📜 Charger l'historique de la session en cours
     conn = get_db_connection()
     cur = conn.cursor()
-    cur.execute("SELECT message, sender, timestamp FROM conversations WHERE user_email = %s ORDER BY timestamp ASC", (email,))
+    cur.execute("""
+        SELECT message, sender, timestamp
+        FROM conversations
+        WHERE user_email = %s AND session_id = %s
+        ORDER BY timestamp ASC
+    """, (email, current_session_id))
     history = cur.fetchall()
     cur.close()
     conn.close()
@@ -142,6 +159,7 @@ def chat():
                            first_name=user_data.get("first_name", ""),
                            last_name=user_data.get("last_name", ""),
                            history=history)
+
 
 @app.route('/login', methods=["GET", "POST"])
 def login():
