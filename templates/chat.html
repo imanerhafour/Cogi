@@ -6,17 +6,20 @@
 <div class="container-fluid mt-4">
   <div class="row">
     <!-- Sidebar historique -->
-    <div class="col-md-3">
-      <div class="list-group">
-        <h5 class="mb-3">🕘 Chat History</h5>
-        {% for convo in sessions %}
-          <a href="{{ url_for('chat', session_id=convo.id) }}" class="list-group-item list-group-item-action {% if convo.id == active_id %}active{% endif %}">
-            {{ convo.timestamp.strftime('%d/%m %H:%M') }}
-          </a>
-        {% endfor %}
-        <a href="{{ url_for('chat', new='1') }}" class="btn btn-sm btn-outline-success mt-3">➕ New Chat</a>
-      </div>
-    </div>
+  <!-- Sidebar historique -->
+<div class="col-md-3">
+  <div class="list-group">
+    <h5 class="mb-3">🕘 Chat History</h5>
+    {% for convo in sessions %}
+      <a href="{{ url_for('chat', session_id=convo.id) }}" class="list-group-item list-group-item-action {% if convo.id == active_id %}active{% endif %}">
+        {{ convo.timestamp.strftime('%d/%m %H:%M') }}
+      </a>
+    {% endfor %}
+    <a href="{{ url_for('chat', new='1') }}" class="btn btn-sm btn-outline-success mt-3">➕ New Chat</a>
+  </div>
+</div>
+
+
 
     <!-- Chat principal -->
     <div class="col-md-9">
@@ -89,4 +92,13 @@
   .timestamp { font-size: 0.8em; color: #888; }
   .chat-box { height: 400px; overflow-y: auto; background: #f9f9f9; border-radius: 10px; }
 </style>
+
+<style>
+  .list-group-item.active {
+    background-color: #9a51e0;
+    border-color: #9a51e0;
+    color: white;
+  }
+</style>
+
 {% endblock %}
