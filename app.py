@@ -96,6 +96,7 @@ def save_user(data):
         conn.close()
 
 def save_message(email, message, sender, session_id):
+    print(f"[DB] Saving message: {sender} | {message} | Session: {session_id}")
     conn = get_db_connection()
     cur = conn.cursor()
     cur.execute("""
@@ -127,23 +128,39 @@ def chat():
     email = session["user"]
     user_data = get_user_by_email(email)
 
-    # 🆕 Gérer l'ID de session pour la conversation
-    if "session_id" not in session or request.args.get("new"):
+    # 📌 Si une session est sélectionnée via l'URL
+    if request.args.get("session_id"):
+        session["session_id"] = request.args.get("session_id")
+
+    # 📌 Nouvelle session si ?new=1 ou pas de session active
+    if request.args.get("new") or "session_id" not in session:
         session["session_id"] = str(uuid.uuid4())
 
     current_session_id = session["session_id"]
 
     if request.method == 'POST':
-        user_message = request.form['message']
-        bot_reply = generate_bot_response(user_message)
+        user_message = request.form.get('message')
+        if user_message:
+               print(f"[LOG] User Message: {user_message}")
+               bot_reply = generate_bot_response(user_message)
+               print(f"[LOG] Bot Reply: {bot_reply}")
+               save_message(email, user_message, 'user', current_session_id)
+               save_message(email, bot_reply, 'bot', current_session_id)
 
-        # 💾 Sauvegarde du message utilisateur et bot avec session_id
-        save_message(email, user_message, 'user', current_session_id)
-        save_message(email, bot_reply, 'bot', current_session_id)
 
-    # 📜 Charger l'historique de la session en cours
+    # 🕘 Charger toutes les sessions de l'utilisateur
     conn = get_db_connection()
     cur = conn.cursor()
+    cur.execute("""
+        SELECT DISTINCT session_id, MIN(timestamp) AS timestamp
+        FROM conversations
+        WHERE user_email = %s
+        GROUP BY session_id
+        ORDER BY timestamp DESC
+    """, (email,))
+    sessions = [{"id": row[0], "timestamp": row[1]} for row in cur.fetchall()]
+
+    # 💬 Charger l'historique de la session active
     cur.execute("""
         SELECT message, sender, timestamp
         FROM conversations
@@ -154,11 +171,13 @@ def chat():
     cur.close()
     conn.close()
 
-    return render_template('chat.html',
+    return render_template("chat.html",
                            username=email,
                            first_name=user_data.get("first_name", ""),
                            last_name=user_data.get("last_name", ""),
-                           history=history)
+                           history=history,
+                           sessions=sessions,
+                           active_id=current_session_id)
 
 
 @app.route('/login', methods=["GET", "POST"])
@@ -317,11 +336,17 @@ def reset_token(token):
 
 @app.route("/send_message", methods=["POST"])
 def send_message():
-    try:
-        user_input = request.json.get("message", "")
-        if not user_input:
-            return jsonify({"reply": "❌ Message vide"}), 400
+    if "user" not in session:
+        return jsonify({"reply": "Not authenticated"}), 401
 
+    user_input = request.json.get("message", "")
+    session_id = session.get("session_id")
+
+    if not user_input:
+        return jsonify({"reply": "❌ Message vide"}), 400
+
+    try:
+        # IA response
         response = client.chat.completions.create(
             model="mistralai/Mistral-7B-Instruct-v0.1",
             messages=[
@@ -332,13 +357,16 @@ def send_message():
             temperature=0.7,
         )
         reply = response.choices[0].message.content.strip()
+
+        # 🔒 Sauvegarde DB
+        save_message(session["user"], user_input, 'user', session_id)
+        save_message(session["user"], reply, 'bot', session_id)
+
         return jsonify({"reply": reply})
     except Exception as e:
         print("Erreur serveur:", e)
         return jsonify({"reply": f"⚠️ Erreur serveur : {e}"}), 500
 
-from flask import request, render_template, redirect, url_for
-from datetime import datetime
 
 @app.route('/feedback', methods=["GET", "POST"])
 def feedback():
@@ -397,6 +425,10 @@ def inject_user_info():
 def logout():
     session.clear()
     return redirect(url_for('index'))
+
+@app.route('/mission')
+def mission():
+    return render_template('mission.html')
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000, debug=True)
