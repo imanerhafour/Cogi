@@ -18,7 +18,7 @@ load_dotenv()
 
 app = Flask(__name__)
 app.secret_key = 'supersecretkey'
-app.permanent_session_lifetime = timedelta(seconds=10)
+app.permanent_session_lifetime = timedelta(minutes=10)
 
 # Config API Together
 api_key = os.environ.get("TOGETHER_API_KEY", "").strip()
@@ -431,21 +431,24 @@ def logout():
 @app.before_request
 def check_session_timeout():
     if 'user' in session:
-        session.modified = True  # met à jour le timer Flask
-
-        # Vérifie le timestamp d’activité
+        session.modified = True
         now = datetime.utcnow()
         last_activity = session.get("last_activity")
 
         if last_activity:
             elapsed = now - datetime.fromisoformat(last_activity)
             if elapsed > app.permanent_session_lifetime:
-                session.clear()
+                print("[DEBUG] Session expired")
                 flash("Session expired due to inactivity.", "warning")
+                session.clear()
+                print("[DEBUG] Redirection vers login après expiration")
+
                 return redirect(url_for("login"))
 
-        # Met à jour la dernière activité
         session["last_activity"] = now.isoformat()
+
+
+
 
 @app.route('/mission')
 def mission():
