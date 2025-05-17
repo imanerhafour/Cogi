@@ -5,7 +5,7 @@
 {% block content %}
 <div class="container-fluid mt-4">
   <div class="row">
-    <!-- Sidebar historique -->
+    
   <!-- Sidebar historique -->
 <div class="col-md-3">
   <div class="list-group">
@@ -100,5 +100,16 @@
     color: white;
   }
 </style>
+<script>
+  // Pour tous les boutons de suggestion
+  document.querySelectorAll(".suggestionBtn").forEach(function(btn) {
+    btn.addEventListener("click", function() {
+      const messageInput = document.getElementById("user-input");
+      messageInput.value = btn.textContent;  // insère le texte dans l'input
+      messageInput.focus();  // met le curseur dedans
+    });
+  });
+</script>
+
 
 {% endblock %}
