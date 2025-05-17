@@ -5,21 +5,19 @@
 {% block content %}
 <div class="container-fluid mt-4">
   <div class="row">
-    
-  <!-- Sidebar historique -->
-<div class="col-md-3">
-  <div class="list-group">
-    <h5 class="mb-3">🕘 Chat History</h5>
-    {% for convo in sessions %}
-      <a href="{{ url_for('chat', session_id=convo.id) }}" class="list-group-item list-group-item-action {% if convo.id == active_id %}active{% endif %}">
-        {{ convo.timestamp.strftime('%d/%m %H:%M') }}
-      </a>
-    {% endfor %}
-    <a href="{{ url_for('chat', new='1') }}" class="btn btn-sm btn-outline-success mt-3">➕ New Chat</a>
-  </div>
-</div>
 
-
+    <!-- Sidebar historique -->
+    <div class="col-md-3">
+      <div class="list-group">
+        <h5 class="mb-3">🕘 Chat History</h5>
+        {% for convo in sessions %}
+          <a href="{{ url_for('chat', session_id=convo.id) }}" class="list-group-item list-group-item-action {% if convo.id == active_id %}active{% endif %}">
+            {{ convo.timestamp.strftime('%d/%m %H:%M') }}
+          </a>
+        {% endfor %}
+        <a href="{{ url_for('chat', new='1') }}" class="btn btn-sm btn-outline-success mt-3">➕ New Chat</a>
+      </div>
+    </div>
 
     <!-- Chat principal -->
     <div class="col-md-9">
@@ -62,44 +60,34 @@
         </div>
 
         <!-- Champ de saisie utilisateur -->
-        <div class="chat-input glass-card">
-          <form method="POST" action="/chat" id="message-form" class="input-group">
-            <input type="text" id="user-input" name="message" class="form-control" placeholder="Type your message here..." autocomplete="off" required>
+        <div class="chat-input p-3">
+          <form method="POST" action="/chat" id="message-form" class="d-flex align-items-center gap-2 no-wrap">
+            <input type="text" id="user-input" name="message" class="form-control flex-grow-1" placeholder="Type your message here..." autocomplete="off" required>
+            
             <button type="button" id="micBtn" class="btn btn-mic">
               <i class="bi bi-mic"></i>
             </button>
+        
             <div id="voice-status" class="voice-status">Micro: inactif</div>
-            <button type="submit" id="send-btn" class="btn btn-love">
-              <i class="bi bi-send-fill"></i> Send
+        
+            <button type="submit" id="send-btn" class="btn btn-love d-flex align-items-center gap-1">
+              <i class="bi bi-send-fill"></i> <span>Send</span>
             </button>
           </form>
-
+        
           <!-- Suggestions -->
-          <div class="chat-suggestions mt-3">
+          <div class="chat-suggestions d-flex gap-2 mt-3 flex-wrap justify-content-center">
             <span class="tag tag-love suggestionBtn">I feel anxious</span>
             <span class="tag tag-peace suggestionBtn">Breathing techniques</span>
             <span class="tag tag-harmony suggestionBtn">How can I improve my mood?</span>
           </div>
         </div>
+
       </div>
     </div>
   </div>
 </div>
 
-<style>
-  .message.user { text-align: right; color: #444; }
-  .message.bot { text-align: left; color: #5c5c5c; }
-  .timestamp { font-size: 0.8em; color: #888; }
-  .chat-box { height: 400px; overflow-y: auto; background: #f9f9f9; border-radius: 10px; }
-</style>
-
-<style>
-  .list-group-item.active {
-    background-color: #9a51e0;
-    border-color: #9a51e0;
-    color: white;
-  }
-</style>
 <script>
   // Pour tous les boutons de suggestion
   document.querySelectorAll(".suggestionBtn").forEach(function(btn) {
@@ -110,6 +98,5 @@
     });
   });
 </script>
-
 
 {% endblock %}
