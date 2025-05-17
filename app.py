@@ -1,6 +1,8 @@
 from flask import Flask, render_template, request, redirect, url_for, session, flash, jsonify
 from werkzeug.security import check_password_hash, generate_password_hash
+from flask import session, redirect, url_for
 from datetime import timedelta
+from datetime import datetime
 from flask_mail import Mail, Message
 from itsdangerous import URLSafeTimedSerializer, SignatureExpired, BadSignature
 import os
@@ -16,7 +18,7 @@ load_dotenv()
 
 app = Flask(__name__)
 app.secret_key = 'supersecretkey'
-app.permanent_session_lifetime = timedelta(minutes=30)
+app.permanent_session_lifetime = timedelta(seconds=10)
 
 # Config API Together
 api_key = os.environ.get("TOGETHER_API_KEY", "").strip()
@@ -425,6 +427,25 @@ def inject_user_info():
 def logout():
     session.clear()
     return redirect(url_for('index'))
+
+@app.before_request
+def check_session_timeout():
+    if 'user' in session:
+        session.modified = True  # met à jour le timer Flask
+
+        # Vérifie le timestamp d’activité
+        now = datetime.utcnow()
+        last_activity = session.get("last_activity")
+
+        if last_activity:
+            elapsed = now - datetime.fromisoformat(last_activity)
+            if elapsed > app.permanent_session_lifetime:
+                session.clear()
+                flash("Session expired due to inactivity.", "warning")
+                return redirect(url_for("login"))
+
+        # Met à jour la dernière activité
+        session["last_activity"] = now.isoformat()
 
 @app.route('/mission')
 def mission():
