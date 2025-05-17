@@ -201,3 +201,9 @@ ALTER TABLE ONLY public.conversations
 -- PostgreSQL database dump complete
 --
 
+-- Table pour les abonnés à la newsletter
+CREATE TABLE IF NOT EXISTS public.subscriber (
+    id SERIAL PRIMARY KEY,
+    email VARCHAR(255) NOT NULL UNIQUE,
+    subscribed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);

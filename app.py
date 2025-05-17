@@ -430,5 +430,28 @@ def logout():
 def mission():
     return render_template('mission.html')
 
+@app.route("/subscribe", methods=["POST"])
+def subscribe():
+    email = request.form.get("email", "").strip().lower()
+
+    if not email or "@" not in email:
+        flash("Invalid email address", "danger")
+        return redirect(url_for("index"))
+
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute("INSERT INTO subscribers (email) VALUES (%s) ON CONFLICT DO NOTHING", (email,))
+        conn.commit()
+        flash("Thanks for subscribing!", "success")
+    except Exception as e:
+        print("❌ Error saving subscription:", e)
+        flash("Something went wrong. Please try again.", "danger")
+    finally:
+        cur.close()
+        conn.close()
+
+    return redirect(url_for("index"))
+
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000, debug=True)
