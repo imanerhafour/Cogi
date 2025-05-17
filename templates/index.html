@@ -169,9 +169,9 @@
           <p class="mb-0">Join our newsletter to receive mental wellness tips, updates about Cogi, and helpful resources.</p>
         </div>
         <div class="col-lg-6">
-          <form class="d-flex gap-2 flex-column flex-sm-row">
+          <form action="{{ url_for('subscribe') }}" method="POST" class="d-flex gap-2 flex-column flex-sm-row">
             <div class="flex-grow-1">
-              <input type="email" class="form-control" placeholder="Your email address">
+              <input type="email" name="email" class="form-control" placeholder="Your email address" required>
             </div>
             <div>
               <button type="submit" class="btn btn-love w-100">Subscribe</button>

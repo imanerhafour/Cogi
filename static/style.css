@@ -3390,12 +3390,3 @@ footer p {
   color: #fff;
 }
 
-/* Uniformiser la hauteur des features */
-.feature.love-feature {
-  min-height: 320px;         /* Assure une hauteur minimale */
-  display: flex;
-  flex-direction: column;
-  justify-content: flex-start;
-  align-items: center;       /* Centrage horizontal des icônes et textes */
-  text-align: center;        /* Centrage du texte */
-}

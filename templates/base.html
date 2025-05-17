@@ -24,6 +24,30 @@
   <script src="https://www.google.com/recaptcha/api.js" async defer></script>
 
   <body>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+  {% if messages %}
+    <div class="position-fixed top-0 start-50 translate-middle-x mt-3" style="z-index:9999;">
+      {% for category, message in messages %}
+        <div class="alert alert-{{ category }} shadow px-4 py-2 rounded-pill">
+          {{ message }}
+        </div>
+      {% endfor %}
+    </div>
+  {% endif %}
+{% endwith %}
+<script>
+  // Attendre 3 secondes (3000ms), puis faire disparaître les alertes
+  setTimeout(function () {
+    const alerts = document.querySelectorAll('.alert');
+    alerts.forEach(alert => {
+      alert.style.transition = "opacity 0.5s ease";
+      alert.style.opacity = "0";
+      setTimeout(() => alert.remove(), 500); // supprime du DOM après fondu
+    });
+  }, 3000); // ← ici tu peux mettre 1000 pour 1 seconde
+</script>
+
  <!-- Navigation Menu -->
 <nav class="navbar navbar-expand-lg custom-navbar">
   <div class="container-fluid">
