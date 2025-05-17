@@ -11,3 +11,4 @@ python-dotenv
 flask
 itsdangerous
 flask-mail
+psycopg2-binary

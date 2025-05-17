@@ -41,7 +41,7 @@ def is_strong_password(password):
     return re.match(r'^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*(),.?":{}|<>]).{8,}$', password)
 
 def get_db_connection():
-    return psycopg2.connect(dbname="cogi_db", user="mac", password="", host="localhost")
+    return psycopg2.connect(dbname="cogi_db", user="mac", password="cogi123", host="localhost", port="5432")
 
 def get_user_by_email(email):
     conn = get_db_connection()
