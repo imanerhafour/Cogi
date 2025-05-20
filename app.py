@@ -118,7 +118,23 @@ def generate_bot_response(user_message):
 
 @app.route('/')
 def index():
-    return render_template('index.html')
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute('SELECT name, message, submitted_at FROM feedback ORDER BY id DESC LIMIT 10')
+    
+    feedbacks = [
+        {"name": row[0], "message": row[1], "submitted_at": row[2]}
+        for row in cur.fetchall()
+    ]
+
+    cur.close()
+    conn.close()
+    
+    return render_template("index.html", feedbacks=feedbacks)
+
+
+
+
 
 
 
@@ -227,42 +243,77 @@ def login():
 
     return render_template("login.html")
 
+from datetime import date
+
 @app.route('/register', methods=["GET", "POST"])
 def register():
     if request.method == "POST":
-        form_data = {key: request.form.get(key) for key in ["first_name", "last_name", "email", "password", "gender", "dob"]}
+        form_data = {
+            key: request.form.get(key)
+            for key in ["first_name", "last_name", "email", "password", "gender", "dob"]
+        }
         recaptcha_response = request.form.get('g-recaptcha-response')
 
+        # Check for missing fields
         if not all(form_data.values()) or not recaptcha_response:
-            flash("Please fill all fields and complete the CAPTCHA.", "error")
+            flash("Veuillez remplir tous les champs et valider le CAPTCHA.", "error")
             return redirect(url_for("register"))
 
+        # CAPTCHA validation
         secret_key = os.environ.get("RECAPTCHA_SECRET")
         payload = {'secret': secret_key, 'response': recaptcha_response}
         captcha_check = requests.post("https://www.google.com/recaptcha/api/siteverify", data=payload).json()
         if not captcha_check.get('success'):
-            flash("CAPTCHA verification failed.", "error")
+            flash("Échec de la vérification CAPTCHA.", "error")
             return redirect(url_for("register"))
 
+        # Date of birth validation
+        try:
+            dob = date.fromisoformat(form_data["dob"])
+            today = date.today()
+            age = today.year - dob.year - ((today.month, today.day) < (dob.month, dob.day))
+
+            if dob > today:
+                flash("Date of birth cannot be in the future.", "error")
+                return redirect(url_for("register"))
+            if age < 13:
+                flash("You must be at least 13 years old to register.", "error")
+                return redirect(url_for("register"))
+            if age > 100:
+                flash("Please enter a realistic date of birth (under 100 years old).", "error")
+                return redirect(url_for("register"))
+        except ValueError:
+            flash("Invalid date format for date of birth.", "error")
+            return redirect(url_for("register"))
+
+        # Password strength check
         if not is_strong_password(form_data["password"]):
             flash("Mot de passe trop faible.", "error")
             return redirect(url_for("register"))
 
+        # Save user
         if not save_user(form_data):
             flash("Cet email est déjà enregistré.", "error")
             return redirect(url_for("register"))
 
+        # Email confirmation
         token = s.dumps(form_data["email"], salt='email-confirm')
         link = url_for('confirm_email', token=token, _external=True)
 
-        msg = Message("Confirme ton adresse email", sender=app.config['MAIL_USERNAME'], recipients=[form_data["email"]])
+        msg = Message(
+            "Confirme ton adresse email",
+            sender=app.config['MAIL_USERNAME'],
+            recipients=[form_data["email"]]
+        )
         msg.body = f"Bienvenue sur Cogi ! Clique ici pour confirmer ton adresse : {link}"
         mail.send(msg)
 
-        flash("Inscription réussie ! Vérifie ton email.", "success")
+        flash("Inscription réussie ! Vérifie ton email pour activer ton compte.", "success")
         return redirect(url_for("login"))
 
-    return render_template("register.html")
+    # GET method: show form with current date
+    return render_template("register.html", current_date=date.today())
+
 
 @app.route('/confirm/<token>')
 def confirm_email(token):
@@ -372,6 +423,10 @@ def send_message():
 
 @app.route('/feedback', methods=["GET", "POST"])
 def feedback():
+    if "user" not in session:
+        flash("You must be logged in to send feedback.", "warning")
+        return redirect(url_for("login"))
+
     conn = get_db_connection()
     cur = conn.cursor()
 
@@ -398,7 +453,7 @@ def feedback():
         conn.close()
         return redirect(url_for("index"))
 
-    else:  # GET method: show feedback list
+    else:  # GET method — afficher tous les feedbacks
         cur.execute("SELECT name, message, submitted_at FROM feedback ORDER BY submitted_at DESC")
         feedbacks = cur.fetchall()
         cur.close()
@@ -406,6 +461,7 @@ def feedback():
         return render_template("feedback.html", feedbacks=[
             {"name": row[0], "message": row[1], "submitted_at": row[2]} for row in feedbacks
         ])
+
 
 
 
