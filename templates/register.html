@@ -60,7 +60,6 @@
             pattern="(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*(),.?':{}|<>]).{8,}"
             oninput="checkPasswordStrength()">
         </div>
-        <!-- Password rules -->
         <ul id="password-requirements" class="list-unstyled small text-muted mt-2">
           <li id="length" class="invalid">❌ At least 8 characters</li>
           <li id="uppercase" class="invalid">❌ One uppercase letter</li>
@@ -91,14 +90,17 @@
           <option value="" disabled selected>Select your gender</option>
           <option value="male">Male</option>
           <option value="female">Female</option>
-          <option value="other">Other</option>
+
         </select>
       </div>
 
       <!-- Date of birth -->
       <div class="mb-3">
         <label for="dob" class="form-label">Date of Birth</label>
-        <input type="date" id="dob" name="dob" class="form-control" required>
+        <input type="date" name="dob" id="dob" class="form-control styled-input" required
+          min="{{ (current_date.replace(year=current_date.year - 100)).isoformat() }}"
+          max="{{ (current_date.replace(year=current_date.year - 13)).isoformat() }}">
+        <span id="dob-feedback" class="feedback-message text-danger"></span>
       </div>
 
       <!-- reCAPTCHA -->
@@ -118,7 +120,7 @@
   </div>
 </div>
 
-<!-- JS -->
+<!-- Scripts -->
 <script src="https://www.google.com/recaptcha/api.js" async defer></script>
 
 <script>
@@ -147,14 +149,60 @@
     }
   }
 
-  document.addEventListener('DOMContentLoaded', function () {
+  document.addEventListener("DOMContentLoaded", function () {
     const form = document.querySelector("form");
-    form.addEventListener("submit", function (e) {
-      if (!form.checkValidity()) {
-        e.preventDefault();
-        e.stopPropagation();
+    const dobInput = document.getElementById("dob");
+    const feedback = document.getElementById("dob-feedback");
+
+    function validateDOB() {
+      const dobValue = dobInput.value;
+      const today = new Date();
+      const dob = new Date(dobValue);
+      const minAge = 13;
+      const maxAge = 100;
+
+      dobInput.classList.remove("is-valid", "is-invalid");
+      feedback.classList.remove("text-danger", "text-success");
+
+      if (!dobValue) {
+        feedback.textContent = "";
+        return false;
       }
-      form.classList.add("was-validated");
+
+      const age = today.getFullYear() - dob.getFullYear() - (
+        today.getMonth() < dob.getMonth() ||
+        (today.getMonth() === dob.getMonth() && today.getDate() < dob.getDate())
+      );
+
+      if (dob > today) {
+        feedback.textContent = "Date of birth cannot be in the future.";
+        dobInput.classList.add("is-valid", "styled-input");
+
+        return false;
+      } else if (age < minAge) {
+        feedback.textContent = "You must be at least 13 years old.";
+        dobInput.classList.add("is-invalid", "styled-input");
+
+        return false;
+      } else if (age > maxAge) {
+        feedback.textContent = "Please enter a realistic date of birth (under 100).";
+        dobInput.classList.add("is-invalid", "styled-input");
+
+        return false;
+      } else {
+        feedback.textContent = "";
+        dobInput.classList.add("is-valid", "styled-input");
+
+        return true;
+      }
+    }
+
+    dobInput.addEventListener("input", validateDOB);
+    form.addEventListener("submit", function (e) {
+      if (!validateDOB()) {
+        e.preventDefault();
+        dobInput.focus();
+      }
     });
   });
 </script>
@@ -162,5 +210,29 @@
 <style>
   .valid { color: green; }
   .invalid { color: red; }
+
+  .styled-input {
+    border: 2px solid rgba(157, 148, 255, 0.2);
+    background-color: rgba(255, 255, 255, 0.8);
+    border-radius: 25px;
+    padding: 10px 15px;
+    font-size: 1rem;
+    transition: all 0.3s ease;
+  }
+
+  .styled-input.is-valid {
+    border-color: #198754;
+    box-shadow: 0 0 5px rgba(25, 135, 84, 0.5);
+  }
+
+  .styled-input.is-invalid {
+    border-color: #dc3545;
+    box-shadow: 0 0 5px rgba(220, 53, 69, 0.5);
+  }
+
+  .feedback-message {
+    font-size: 0.9rem;
+    margin-top: 5px;
+  }
 </style>
 {% endblock %}

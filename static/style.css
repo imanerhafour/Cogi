@@ -3372,3 +3372,96 @@ footer p {
 #message-form > * {
   margin-right: 6px;
 }
+ .feedback-scroll-container {
+  position: relative;
+  display: flex;
+  align-items: center;
+  overflow: hidden;
+  padding: 20px 0;
+}
+
+.feedback-scroll {
+  display: flex;
+  overflow-x: auto;
+  scroll-behavior: smooth;
+  gap: 20px;
+  padding: 10px 20px;
+}
+
+.feedback-card {
+  min-width: 300px;
+  max-width: 320px;
+  background: white;
+  border-radius: 20px;
+  padding: 30px 20px;
+  box-shadow: var(--soft-shadow);
+  transition: transform 0.3s ease;
+  flex-shrink: 0;
+}
+
+.feedback-card:hover {
+  transform: scale(1.05);
+  box-shadow: var(--hover-shadow);
+}
+
+.feedback-message {
+  font-style: italic;
+  color: var(--text-medium);
+  margin-bottom: 20px;
+}
+
+.feedback-author {
+  font-weight: 600;
+  text-align: right;
+  color: var(--text-dark);
+}
+
+.scroll-btn {
+  background: var(--love-gradient);
+  color: white;
+  border: none;
+  border-radius: 50%;
+  width: 45px;
+  height: 45px;
+  font-size: 1.5rem;
+  box-shadow: var(--soft-shadow);
+  cursor: pointer;
+  transition: var(--soft-transition);
+  z-index: 10;
+}
+
+.scroll-btn:hover {
+  transform: scale(1.1);
+  box-shadow: var(--hover-shadow);
+}
+
+.scroll-btn.left {
+  margin-right: 10px;
+}
+
+.scroll-btn.right {
+  margin-left: 10px;
+}
+
+.styled-input {
+  border: 2px solid #0f6848;
+  border-radius: 25px;
+  padding: 10px 15px;
+  width: 100%;
+  font-size: 1rem;
+  outline: none;
+}
+
+.styled-input:focus {
+  border-color: #198754;
+  box-shadow: 0 0 5px rgba(25, 135, 84, 0.5);
+}
+
+.feedback-message {
+  font-size: 0.85rem;
+  color: red;
+  margin-top: 5px;
+  display: block;
+}
+
+

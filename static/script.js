@@ -132,3 +132,13 @@ function formatTimestamp() {
   const minutes = now.getMinutes().toString().padStart(2, '0');
   return `${hours}:${minutes}`;
 }
+
+// ========== Fonction scroll  ==========
+function scrollFeedbacks(direction) {
+  const container = document.getElementById('feedbackContainer');
+  const scrollAmount = 320; // Ajuste selon la taille d'une carte
+  container.scrollBy({
+    left: direction * scrollAmount,
+    behavior: 'smooth'
+  });
+}
