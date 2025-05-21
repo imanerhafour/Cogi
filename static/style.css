@@ -248,6 +248,16 @@ a:hover {
   padding: 10px;
   
 }
+/* Scroll */
+.chat-box {
+  flex: 1;
+  overflow-y: auto;
+  padding: 20px;
+  min-height: 0;
+  max-height: calc(100% - 150px);
+  background-color: var(--light-bg); /* si défini */
+}
+
 .navbar-nav .nav-link::before {
   content: '';
   position: absolute;
@@ -3327,7 +3337,7 @@ footer p {
   display: flex;
   flex-direction: column;  /* important pour que les éléments soient verticalement placés */
   gap: 15px;
-  margin-top: 200px;  /* ⬅️ C'est ce qui fait descendre toute la section */
+  margin-top: auto;  /* ⬅️ C'est ce qui fait descendre toute la section */
 }
 
 .chat-input .btn-mic {
@@ -3483,3 +3493,4 @@ footer p {
 .list-group-item form {
   margin: 0;
 }
+
