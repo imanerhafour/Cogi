@@ -112,7 +112,21 @@ def save_message(email, message, sender, session_id):
 
 
 def generate_bot_response(user_message):
-    return "Ceci est une réponse automatique (à remplacer par ton modèle IA)"
+    try:
+        response = client.chat.completions.create(
+            model="mistralai/Mistral-7B-Instruct-v0.1",
+            messages=[
+                {"role": "system", "content": "You are a helpful mental health assistant."},
+                {"role": "user", "content": user_message},
+            ],
+            max_tokens=200,
+            temperature=0.7,
+        )
+        return response.choices[0].message.content.strip()
+    except Exception as e:
+        print("Erreur API IA:", e)
+        return "⚠️ Je n'ai pas pu générer de réponse pour le moment."
+
 
 # ------------------- Routes -------------------
 
@@ -137,7 +151,6 @@ def index():
 
 
 
-
 @app.route('/chat', methods=['GET', 'POST'])
 def chat():
     if "user" not in session:
@@ -146,11 +159,9 @@ def chat():
     email = session["user"]
     user_data = get_user_by_email(email)
 
-    # 📌 Si une session est sélectionnée via l'URL
     if request.args.get("session_id"):
         session["session_id"] = request.args.get("session_id")
 
-    # 📌 Nouvelle session si ?new=1 ou pas de session active
     if request.args.get("new") or "session_id" not in session:
         session["session_id"] = str(uuid.uuid4())
 
@@ -159,26 +170,29 @@ def chat():
     if request.method == 'POST':
         user_message = request.form.get('message')
         if user_message:
-               print(f"[LOG] User Message: {user_message}")
-               bot_reply = generate_bot_response(user_message)
-               print(f"[LOG] Bot Reply: {bot_reply}")
-               save_message(email, user_message, 'user', current_session_id)
-               save_message(email, bot_reply, 'bot', current_session_id)
+            bot_reply = generate_bot_response(user_message)
+            save_message(email, user_message, 'user', current_session_id)
+            save_message(email, bot_reply, 'bot', current_session_id)
 
-
-    # 🕘 Charger toutes les sessions de l'utilisateur
     conn = get_db_connection()
     cur = conn.cursor()
+
     cur.execute("""
-        SELECT DISTINCT session_id, MIN(timestamp) AS timestamp
+        SELECT session_id, MIN(timestamp) AS timestamp
         FROM conversations
         WHERE user_email = %s
         GROUP BY session_id
         ORDER BY timestamp DESC
     """, (email,))
-    sessions = [{"id": row[0], "timestamp": row[1]} for row in cur.fetchall()]
+    session_rows = cur.fetchall()
 
-    # 💬 Charger l'historique de la session active
+    sessions = []
+    for sid, timestamp in session_rows:
+        cur.execute("SELECT title FROM conversations WHERE session_id = %s AND title IS NOT NULL ORDER BY timestamp LIMIT 1", (sid,))
+        title_result = cur.fetchone()
+        title = title_result[0] if title_result else None
+        sessions.append({"id": sid, "timestamp": timestamp, "title": title})
+
     cur.execute("""
         SELECT message, sender, timestamp
         FROM conversations
@@ -189,13 +203,7 @@ def chat():
     cur.close()
     conn.close()
 
-    return render_template("chat.html",
-                           username=email,
-                           first_name=user_data.get("first_name", ""),
-                           last_name=user_data.get("last_name", ""),
-                           history=history,
-                           sessions=sessions,
-                           active_id=current_session_id)
+    return render_template("chat.html", username=email, first_name=user_data.get("first_name", ""), last_name=user_data.get("last_name", ""), history=history, sessions=sessions, active_id=current_session_id)
 
 
 @app.route('/login', methods=["GET", "POST"])
@@ -464,6 +472,44 @@ def feedback():
 
 
 
+@app.route('/rename_chat', methods=["POST"])
+def rename_chat():
+    chat_id = request.form.get("chat_id")
+    new_title = request.form.get("new_title", "").strip()
+ 
+    if not new_title:
+        flash("Le titre ne peut pas être vide.", "warning")
+        return redirect(url_for("chat", session_id=chat_id))
+
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute("UPDATE conversations SET title = %s WHERE session_id = %s", (new_title, chat_id))
+    conn.commit()
+    cur.close()
+    conn.close()
+
+    flash("✅ Chat renamed successfully.", "success")
+    return redirect(url_for("chat", session_id=chat_id))
+
+
+@app.route('/delete_chat', methods=["POST"])
+def delete_chat():
+    chat_id = request.form.get("chat_id")
+    if not chat_id:
+        flash("Invalid delete request", "danger")
+        return redirect(url_for("chat"))
+
+    conn = get_db_connection()
+    cur = conn.cursor()
+    try:
+        cur.execute("DELETE FROM conversations WHERE session_id = %s", (chat_id,))
+        conn.commit()
+    except Exception as e:
+        flash(f"Delete failed: {e}", "danger")
+    finally:
+        cur.close()
+        conn.close()
+    return redirect(url_for("chat"))
 
 
 
@@ -521,7 +567,7 @@ def subscribe():
     try:
         conn = get_db_connection()
         cur = conn.cursor()
-        cur.execute("INSERT INTO subscribers (email) VALUES (%s) ON CONFLICT DO NOTHING", (email,))
+        cur.execute("INSERT INTO subscriber (email) VALUES (%s) ON CONFLICT DO NOTHING", (email,))
         conn.commit()
         flash("Thanks for subscribing!", "success")
     except Exception as e:
