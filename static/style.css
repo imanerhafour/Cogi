@@ -3465,3 +3465,21 @@ footer p {
 }
 
 
+.rename-input {
+  width: 120px;
+  margin-right: 5px;
+}
+
+.list-group-item.active {
+  background-color: #dcd7ff;
+  border-color: #c4b3ff;
+}
+
+.list-group-item a {
+  font-weight: bold;
+  color: #3c3c3c;
+}
+
+.list-group-item form {
+  margin: 0;
+}

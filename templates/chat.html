@@ -5,15 +5,26 @@
 {% block content %}
 <div class="container-fluid mt-4">
   <div class="row">
-
     <!-- Sidebar historique -->
     <div class="col-md-3">
       <div class="list-group">
         <h5 class="mb-3">🕘 Chat History</h5>
         {% for convo in sessions %}
-          <a href="{{ url_for('chat', session_id=convo.id) }}" class="list-group-item list-group-item-action {% if convo.id == active_id %}active{% endif %}">
-            {{ convo.timestamp.strftime('%d/%m %H:%M') }}
-          </a>
+          <div class="list-group-item d-flex justify-content-between align-items-center {% if convo.id == active_id %}active{% endif %}">
+            <form method="POST" action="{{ url_for('rename_chat') }}" class="d-flex align-items-center w-100 me-2">
+              <input type="hidden" name="chat_id" value="{{ convo.id }}">
+              <a href="{{ url_for('chat', session_id=convo.id) }}" class="text-decoration-none text-dark flex-grow-1">
+                {{ convo.title or convo.timestamp.strftime('%d/%m %H:%M') }}
+              </a>
+              <input type="text" name="new_title" class="form-control form-control-sm rename-input ms-2" placeholder="Rename..." style="display:none; max-width: 100px;">
+              <button type="submit" class="btn btn-sm btn-light rename-btn ms-1">✏️</button>
+            </form>
+
+            <form method="POST" action="{{ url_for('delete_chat') }}" class="delete-form">
+              <input type="hidden" name="chat_id" value="{{ convo.id }}">
+              <button type="submit" class="btn btn-outline-danger btn-sm ms-1">🗑️</button>
+            </form>
+          </div>
         {% endfor %}
         <a href="{{ url_for('chat', new='1') }}" class="btn btn-sm btn-outline-success mt-3">➕ New Chat</a>
       </div>
@@ -22,10 +33,7 @@
     <!-- Chat principal -->
     <div class="col-md-9">
       <div class="chat-container">
-
-        <!-- Zone d'affichage des messages -->
         <div id="chat-box" class="chat-box">
-          <!-- Message de bienvenue -->
           <div class="chat-message bot-message fade-in">
             <div class="message-avatar">
               <i class="bi bi-robot"></i>
@@ -33,70 +41,89 @@
             <div class="message-content">
               <div class="message-sender">Cogi</div>
               <div class="message-text">
-                Hello {{ first_name }} {{ last_name }}! How can I help you today? I'm here to talk about whatever is on your mind.
+                Hello {{ first_name }} {{ last_name }}! How can I help you today?
               </div>
             </div>
           </div>
-
-          <!-- Historique des messages -->
           {% if history %}
             {% for msg in history %}
               <div class="chat-message {% if msg[1] == 'user' %}user-message{% else %}bot-message{% endif %} fade-in">
                 <div class="message-avatar">
-                  {% if msg[1] == 'user' %}
-                    <i class="bi bi-person-circle"></i>
-                  {% else %}
-                    <i class="bi bi-robot"></i>
-                  {% endif %}
+                  {% if msg[1] == 'user' %}<i class="bi bi-person-circle"></i>{% else %}<i class="bi bi-robot"></i>{% endif %}
                 </div>
                 <div class="message-content">
                   <div class="message-sender">{{ msg[1] | capitalize }}</div>
                   <div class="message-text">{{ msg[0] }}</div>
-                  <div class="message-time">{{ msg[2] }}</div>
+                  <div class="message-timestamp">{{ msg[2].strftime('%d/%m %H:%M') }}</div>
                 </div>
               </div>
             {% endfor %}
+          {% else %}
+            <p class="text-muted">No messages yet.</p>
           {% endif %}
         </div>
 
-        <!-- Champ de saisie utilisateur -->
         <div class="chat-input p-3">
-          <form method="POST" action="/chat" id="message-form" class="d-flex align-items-center gap-2 no-wrap">
+          <form method="POST" action="/chat" id="message-form" class="d-flex align-items-center gap-2">
             <input type="text" id="user-input" name="message" class="form-control flex-grow-1" placeholder="Type your message here..." autocomplete="off" required>
-            
-            <button type="button" id="micBtn" class="btn btn-mic">
-              <i class="bi bi-mic"></i>
-            </button>
-        
-            <div id="voice-status" class="voice-status">Micro: inactif</div>
-        
             <button type="submit" id="send-btn" class="btn btn-love d-flex align-items-center gap-1">
-              <i class="bi bi-send-fill"></i> <span>Send</span>
+              <i class="bi bi-send-fill"></i><span>Send</span>
             </button>
           </form>
-        
-          <!-- Suggestions -->
           <div class="chat-suggestions d-flex gap-2 mt-3 flex-wrap justify-content-center">
             <span class="tag tag-love suggestionBtn">I feel anxious</span>
             <span class="tag tag-peace suggestionBtn">Breathing techniques</span>
             <span class="tag tag-harmony suggestionBtn">How can I improve my mood?</span>
           </div>
         </div>
-
       </div>
     </div>
   </div>
 </div>
 
+<!-- JS SweetAlert et actions -->
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
 <script>
-  // Pour tous les boutons de suggestion
-  document.querySelectorAll(".suggestionBtn").forEach(function(btn) {
-    btn.addEventListener("click", function() {
-      const messageInput = document.getElementById("user-input");
-      messageInput.value = btn.textContent;  // insère le texte dans l'input
-      messageInput.focus();  // met le curseur dedans
+  // Suggestions prédéfinies
+  document.querySelectorAll(".suggestionBtn").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const input = document.getElementById("user-input");
+      input.value = btn.textContent;
+      input.focus();
+    });
+  });
+
+  // Affichage du champ Rename
+  document.querySelectorAll('.rename-btn').forEach(button => {
+    button.addEventListener('click', function(e) {
+      const input = this.closest('form').querySelector('.rename-input');
+      if (input.style.display === "none") {
+        e.preventDefault();
+        input.style.display = "inline-block";
+        input.focus();
+      }
+    });
+  });
+
+  // Confirmation de suppression avec SweetAlert
+  document.querySelectorAll('.delete-form').forEach(form => {
+    form.addEventListener('submit', function(e) {
+      e.preventDefault();
+      Swal.fire({
+        title: '🗑️ Are you sure?',
+        text: "This chat will be deleted permanently!",
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#d33',
+        cancelButtonColor: '#aaa',
+        confirmButtonText: 'Yes, delete it!',
+      }).then((result) => {
+        if (result.isConfirmed) {
+          form.submit();
+        }
+      });
     });
   });
 </script>
-
 {% endblock %}
