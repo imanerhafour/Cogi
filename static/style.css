@@ -3494,3 +3494,60 @@ footer p {
   margin: 0;
 }
 
+/* Harmonisation de SweetAlert2 avec le thème Cogi */
+.swal2-popup {
+  background: linear-gradient(135deg, #fce4ec, #e1bee7);
+  border-radius: 1.5rem;
+  color: #4a148c;
+  font-family: 'Poppins', sans-serif;
+  box-shadow: 0 10px 25px rgba(204, 153, 255, 0.25);
+  padding: 2rem;
+}
+
+.swal2-title {
+  color: #7b1fa2;
+  font-weight: 600;
+  font-size: 1.8rem;
+}
+
+.swal2-html-container {
+  color: #4a148c;
+  font-size: 1rem;
+  margin-top: 0.5rem;
+}
+
+.swal2-icon {
+  border-color: #ba68c8;
+  color: #ba68c8;
+}
+
+.swal2-confirm {
+  background: linear-gradient(135deg, #ec407a, #ab47bc);
+  color: white;
+  border: none;
+  padding: 0.6rem 1.5rem;
+  border-radius: 10px;
+  box-shadow: 0 4px 15px rgba(233, 30, 99, 0.4);
+  transition: all 0.3s ease-in-out;
+}
+
+.swal2-confirm:hover {
+  background: linear-gradient(135deg, #d81b60, #8e24aa);
+  box-shadow: 0 6px 20px rgba(233, 30, 99, 0.5);
+}
+
+.swal2-cancel {
+  background-color: #e1bee7;
+  color: #4a148c;
+  border-radius: 10px;
+  border: 1px solid #ce93d8;
+  padding: 0.6rem 1.5rem;
+  margin-left: 10px;
+  transition: all 0.3s ease-in-out;
+}
+
+.swal2-cancel:hover {
+  background-color: #f3e5f5;
+  color: #6a1b9a;
+  border-color: #ba68c8;
+}

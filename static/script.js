@@ -47,12 +47,16 @@ document.addEventListener('DOMContentLoaded', function () {
     });
 
     recognition.onresult = function (event) {
-      const transcript = event.results[0][0].transcript;
-      userInput.value = transcript;
+  const transcript = event.results[0][0].transcript;
+  userInput.value = transcript;
 
-      if (sendBtn) sendBtn.click();
-      resetMicUI();
-    };
+  // ✅ Laisse l'utilisateur appuyer sur "Send"
+  voiceStatus.textContent = "Message prêt à envoyer";
+  voiceStatus.classList.add('voice-active');
+  micBtn.innerHTML = '<i class="bi bi-mic"></i>';
+  micBtn.classList.remove('recording');
+};
+
 
     recognition.onerror = function (event) {
       voiceStatus.textContent = `Erreur: ${event.error}`;
@@ -78,12 +82,28 @@ document.addEventListener('DOMContentLoaded', function () {
 
   // ========== Envoi de message à Flask ==========
   function displayMessage(text, sender) {
-    const msg = document.createElement('div');
-    msg.className = `message ${sender}`;
-    msg.innerHTML = `<p>${text}</p><span class="timestamp">${formatTimestamp()}</span>`;
-    chatBox.appendChild(msg);
-    chatBox.scrollTop = chatBox.scrollHeight;
-  }
+  const messageWrapper = document.createElement('div');
+  messageWrapper.classList.add('chat-message');
+  messageWrapper.classList.add(sender === 'user' ? 'user-message' : 'bot-message');
+
+  const avatar = document.createElement('div');
+  avatar.classList.add('message-avatar');
+  avatar.innerHTML = sender === 'user' ? '<i class="bi bi-person-fill"></i>' : '<i class="bi bi-robot"></i>';
+
+  const content = document.createElement('div');
+  content.classList.add('message-content');
+  content.innerHTML = `
+    <div class="message-sender">${sender === 'user' ? 'User' : 'Bot'}</div>
+    <div class="message-text">${text}</div>
+    <div class="timestamp">${formatTimestamp()}</div>
+  `;
+
+  messageWrapper.appendChild(avatar);
+  messageWrapper.appendChild(content);
+  chatBox.appendChild(messageWrapper);
+  chatBox.scrollTop = chatBox.scrollHeight;
+}
+
 
   sendBtn.addEventListener('click', function (e) {
     e.preventDefault();
