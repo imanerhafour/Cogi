@@ -1312,13 +1312,18 @@ a:hover {
 
 /* ===== ALERT MESSAGES ===== */
 .alert {
-  padding: 20px 25px;
+  padding: 16px 25px 16px 50px;
   margin-bottom: 25px;
   border: none;
   border-radius: 20px;
   position: relative;
   overflow: hidden;
   box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  line-height: 1.4;
 }
 
 .alert::before {
@@ -1331,41 +1336,95 @@ a:hover {
   border-radius: 4px 0 0 4px;
 }
 
-.alert-danger {
-  background-color: rgba(255, 245, 245, 0.9);
-  color: #52e078;
+/* Icône intégrée */
+.alert::after {
+  position: absolute;
+  left: 15px;
+  font-size: 1.3rem;
 }
 
-.alert-danger::before {
-  background: linear-gradient(to bottom, #1cda6b, #51ff9f);
-}
-
+/* ✅ Success */
 .alert-success {
-  background-color: rgba(240, 253, 250, 0.9);
-  color: #0d9488;
+  background-color: #e6fff4;
+  color: #056642;
 }
 
 .alert-success::before {
-  background: linear-gradient(to bottom, #7ceca9, #45cb7a);
+  background: linear-gradient(to bottom, #54f3b6, #1bbb78);
 }
 
+/* ❌ Danger */
+.alert-danger {
+  background-color: #ffeaea;
+  color: #b00020;
+}
+
+.alert-danger::before {
+  background: linear-gradient(to bottom, #ff4d4f, #c0392b);
+}
+
+/* ⚠️ Warning */
 .alert-warning {
-  background-color: rgba(255, 251, 235, 0.9);
-  color: #d97706;
+  background-color: #fff8e6;
+  color: #ad6800;
 }
 
 .alert-warning::before {
-  background: linear-gradient(to bottom, #ffaa7c, #ff8a3d);
+  background: linear-gradient(to bottom, #ffd666, #fa8c16);
 }
 
+/* 🔔 Info */
 .alert-info {
-  background-color: rgba(236, 254, 255, 0.9);
-  color: #0891b2;
+  background-color: #e6f7ff;
+  color: #096dd9;
 }
 
 .alert-info::before {
-  background: linear-gradient(to bottom, #7ec8e3, #4aafda);
+  background: linear-gradient(to bottom, #69c0ff, #40a9ff);
 }
+
+/* Bar verticale à gauche */
+.alert::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 8px;
+  height: 100%;
+  border-radius: 4px 0 0 4px;
+}
+
+/* Boîte d'alerte */
+.alert {
+  padding: 20px 25px;
+  margin-bottom: 25px;
+  border: none;
+  border-radius: 20px;
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 1rem;
+}
+
+
+
+/* ℹ️ Info */
+.alert-info {
+  background-color: #e6f7ff;
+  color: #0050b3;
+}
+
+.alert-info::before {
+  background: linear-gradient(to bottom, #69c0ff, #40a9ff);
+}
+
+.alert-info::after {
+  content: "ℹ️";
+}
+
 
 /* ===== LOVE & PEACE QUOTE BLOCK ===== */
 blockquote {
@@ -3023,6 +3082,7 @@ footer p {
     color: #999 !important;
   }
 }
+
 /* Styles pour le formulaire de feedback */
 .feedback-form {
   padding: 40px;
@@ -3494,3 +3554,31 @@ footer p {
   margin: 0;
 }
 
+
+/* ====== Microphone Status ====== */
+#voice-status {
+  font-size: 0.9rem;
+  margin-top: 5px;
+  color: #555;
+  text-align: center;
+  transition: color 0.3s ease, font-weight 0.3s ease;
+}
+
+.voice-active {
+  color: var(--love-pink); /* ou remplace par #ff7eb9 si besoin */
+  font-weight: bold;
+}
+
+/* ====== Microphone Button ====== */
+#micBtn {
+  background-color: transparent;
+  border: none;
+  font-size: 1.5rem;
+  margin-left: 10px;
+  cursor: pointer;
+  color: #555;
+}
+
+#micBtn.recording {
+  color: var(--peace-blue); /* ou autre couleur pour "enregistrement actif" */
+}

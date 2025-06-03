@@ -6,21 +6,10 @@
 <div class="container">
   <div class="form-container fade-in">
     <div class="text-center mb-4">
-      <img alt="Cogi Logo" height="60" class="mb-3" onerror="this.style.display='none'">
+      
       <h2>Sign Up</h2>
       <p class="text-muted">Create an account to start chatting with Cogi.</p>
     </div>
-
-    <!-- Flash messages -->
-    {% with messages = get_flashed_messages(with_categories=true) %}
-      {% if messages %}
-        <div class="alert alert-danger" role="alert">
-          {% for category, message in messages %}
-            <p class="mb-0">{{ message }}</p>
-          {% endfor %}
-        </div>
-      {% endif %}
-    {% endwith %}
 
     <!-- Registration form -->
     <form method="POST" class="needs-validation" novalidate>

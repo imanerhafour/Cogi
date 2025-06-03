@@ -1,122 +1,110 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>{% block title %}Cogi - Your Mental Health Companion{% endblock %}</title>
-    <meta name="description" content="Cogi is your mental health companion, offering support whenever you need to talk to someone, 24/7, in a safe and confidential environment." />
-    <meta name="author" content="Cogi" />
-    <meta property="og:title" content="Cogi - Your Mental Health Companion" />
-    <meta property="og:description" content="Cogi is your mental health companion, offering support whenever you need to talk to someone, 24/7, in a safe and confidential environment." />
-    <meta property="og:type" content="website" />
-    <meta property="og:image" content="https://lovable.dev/opengraph-image-p98pqg.png" />
-    <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:site" content="@lovable_dev" />
-    <meta name="twitter:image" content="https://lovable.dev/opengraph-image-p98pqg.png" />
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{% block title %}Cogi - Your Mental Health Companion{% endblock %}</title>
+  <meta name="description" content="Cogi is your mental health companion, offering support whenever you need to talk to someone, 24/7, in a safe and confidential environment." />
+  <meta name="author" content="Cogi" />
+  <meta property="og:title" content="Cogi - Your Mental Health Companion" />
+  <meta property="og:description" content="Cogi is your mental health companion, offering support whenever you need to talk to someone, 24/7, in a safe and confidential environment." />
+  <meta property="og:type" content="website" />
+  <meta property="og:image" content="https://lovable.dev/opengraph-image-p98pqg.png" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:site" content="@lovable_dev" />
+  <meta name="twitter:image" content="https://lovable.dev/opengraph-image-p98pqg.png" />
+  <link rel="icon" type="image/png" href="{{ url_for('static', filename='logo_cogi.png') }}">
 
-    
-   <!-- Stylesheets -->
-<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
-<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
-    
-    {% block extra_head %}{% endblock %}
-  </head>
-  <script src="https://www.google.com/recaptcha/api.js" async defer></script>
+  <!-- Stylesheets -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  {% block extra_head %}{% endblock %}
+</head>
 
-  <body>
+<script src="https://www.google.com/recaptcha/api.js" async defer></script>
 
-    {% with messages = get_flashed_messages(with_categories=true) %}
-  {% if messages %}
-    <div class="position-fixed top-0 start-50 translate-middle-x mt-3" style="z-index:9999;">
-      {% for category, message in messages %}
-        <div class="alert alert-{{ category }} shadow px-4 py-2 rounded-pill">
-          {{ message }}
+<body>
+
+  <!-- Navbar -->
+  <nav class="navbar navbar-expand-lg custom-navbar">
+    <div class="container-fluid">
+      <div class="d-flex justify-content-between align-items-center w-100">
+        <a class="navbar-brand d-flex align-items-center gap-2" href="/">
+          <img src="{{ url_for('static', filename='logo_cogi.png') }}" alt="COGI logo" style="height: 52px; width: auto; object-fit: contain;">
+          <span style="font-weight: bold; font-size: 1.5rem;">Cogi</span>
+        </a>
+        
+
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+          <span class="navbar-toggler-icon"></span>
+        </button>
+
+        <div class="collapse navbar-collapse justify-content-center" id="navbarNav">
+          <ul class="navbar-nav gap-4">
+            <li class="nav-item"><a class="nav-link" href="/">Home</a></li>
+            <li class="nav-item"><a class="nav-link" href="/mission">Mission</a></li>
+            <li class="nav-item"><a class="nav-link" href="/chat">Chat</a></li>
+          </ul>
         </div>
-      {% endfor %}
-    </div>
-  {% endif %}
-{% endwith %}
-<script>
-  // Attendre 3 secondes (3000ms), puis faire disparaître les alertes
-  setTimeout(function () {
-    const alerts = document.querySelectorAll('.alert');
-    alerts.forEach(alert => {
-      alert.style.transition = "opacity 0.5s ease";
-      alert.style.opacity = "0";
-      setTimeout(() => alert.remove(), 500); // supprime du DOM après fondu
-    });
-  }, 3000); // ← ici tu peux mettre 1000 pour 1 seconde
-</script>
 
- <!-- Navigation Menu -->
-<nav class="navbar navbar-expand-lg custom-navbar">
-  <div class="container-fluid">
-    <div class="d-flex justify-content-between align-items-center w-100">
-      <a class="navbar-brand" href="/">
-        Cogi
-      </a>
-      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
-        <span class="navbar-toggler-icon"></span>
-      </button>
-      <div class="collapse navbar-collapse justify-content-center" id="navbarNav">
-        <ul class="navbar-nav gap-4">
-          <li class="nav-item">
-            <a class="nav-link" href="/">Home</a>
-          </li>
-          <li class="nav-item">
-            <a class="nav-link" href="/mission">Mission</a>
-          </li>
-          <li class="nav-item">
-            <a class="nav-link" href="/chat">Chat</a>
-          </li>
-        </ul>
-      </div>
-
-
-      <div class="d-flex align-items-center">
-        {% if session.get('user') %}
-          <div class="btn btn-light me-3 rounded-pill" style="cursor: default; background-color: transparent; border: 1px solid #FFFFFF; color: #5e5b5b;">
-            <i class="bi bi-person-circle me-2"></i>
-            {% if first_name and last_name %}{{ first_name }} {{ last_name }}{% else %}{{ session.get('user').split('@')[0] }}{% endif %}
-          </div>
-          <a href="/logout" class="btn btn-outline-light rounded-pill">Log out</a>
-        {% else %}
-          <a href="/login" class="btn btn-outline-light">Log in</a>
-        {% endif %}
+        <div class="d-flex align-items-center">
+          {% if session.get('user') %}
+            <div class="btn btn-light me-3 rounded-pill" style="cursor: default; background-color: transparent; border: 1px solid #FFFFFF; color: #5e5b5b;">
+              <i class="bi bi-person-circle me-2"></i>
+              {% if first_name and last_name %}{{ first_name }} {{ last_name }}{% else %}{{ session.get('user').split('@')[0] }}{% endif %}
+            </div>
+            <a href="/logout" class="btn btn-outline-light rounded-pill">Log out</a>
+          {% else %}
+            <a href="/login" class="btn btn-outline-light">Log in</a>
+          {% endif %}
+        </div>
       </div>
     </div>
-  </div>
-</nav>
+  </nav>
 
-{% with messages = get_flashed_messages(with_categories=true) %}
+  {% with messages = get_flashed_messages(with_categories=true) %}
   {% if messages %}
     <div class="container mt-3">
+      {% set seen = [] %}
       {% for category, message in messages %}
-        <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
-          {{ message }}
-          <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-        </div>
+        {% if message not in seen %}
+          {% set _ = seen.append(message) %}
+          <div class="alert alert-{{ category }} alert-dismissible fade show d-flex align-items-center gap-2" role="alert">
+            {% if category == 'success' %}
+              <i class="bi bi-check-circle-fill text-success fs-5"></i>
+            {% elif category in ['danger', 'error'] %}
+              <i class="bi bi-x-circle-fill text-danger fs-5"></i>
+            {% elif category == 'warning' %}
+              <i class="bi bi-exclamation-triangle-fill text-warning fs-5"></i>
+            {% else %}
+              <i class="bi bi-info-circle-fill text-info fs-5"></i>
+            {% endif %}
+            <span>{{ message }}</span>
+            <button type="button" class="btn-close ms-auto" data-bs-dismiss="alert" aria-label="Close"></button>
+          </div>
+        {% endif %}
       {% endfor %}
     </div>
   {% endif %}
 {% endwith %}
 
-    
-    <main>
-      {% block content %}{% endblock %}
-    </main>
-    
-    <footer class="bg-dark text-white text-center py-3">
-      <div class="container">
-        <p>&copy; 2025 Cogi - Your Mental Health Companion</p>
-      </div>
-    </footer>
-    
-    <!-- Scripts -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="{{ url_for('static', filename='script.js') }}"></script>
-  </body>
+  <!-- Contenu -->
+  <main>
+    {% block content %}{% endblock %}
+  </main>
+
+  <!-- Footer -->
+  <footer class="bg-dark text-white text-center py-3">
+    <div class="container">
+      <p>&copy; 2025 Cogi - Your Mental Health Companion</p>
+    </div>
+  </footer>
+
+  <!-- Scripts -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="{{ url_for('static', filename='script.js') }}"></script>
+</body>
 </html>

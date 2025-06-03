@@ -1,3 +1,4 @@
+
 document.addEventListener('DOMContentLoaded', function () {
   // ========== Navigation active ==========
   const currentPath = window.location.pathname;
@@ -19,7 +20,7 @@ document.addEventListener('DOMContentLoaded', function () {
   voiceStatus.id = 'voice-status';
   voiceStatus.className = 'voice-status';
   voiceStatus.textContent = 'Micro: inactif';
-  micBtn.parentNode.insertBefore(voiceStatus, micBtn.nextSibling);
+  if (micBtn) micBtn.parentNode.insertBefore(voiceStatus, micBtn.nextSibling);
 
   let recognition;
 
@@ -30,28 +31,31 @@ document.addEventListener('DOMContentLoaded', function () {
     recognition.interimResults = false;
     recognition.lang = 'fr-FR';
 
-    micBtn.addEventListener('click', function () {
-      if (micBtn.classList.contains('recording')) {
-        recognition.stop();
-      } else {
-        try {
-          recognition.start();
-          voiceStatus.textContent = "Micro: écoute en cours...";
-          voiceStatus.classList.add('voice-active');
-          micBtn.innerHTML = '<i class="bi bi-mic-fill"></i>';
-          micBtn.classList.add('recording');
-        } catch (error) {
-          voiceStatus.textContent = "Erreur: " + error.message;
+    if (micBtn) {
+      micBtn.addEventListener('click', function () {
+        if (micBtn.classList.contains('recording')) {
+          recognition.stop();
+        } else {
+          try {
+            recognition.start();
+            voiceStatus.textContent = "Micro: écoute en cours...";
+            voiceStatus.classList.add('voice-active');
+            micBtn.innerHTML = '<i class="bi bi-mic-fill"></i>';
+            micBtn.classList.add('recording');
+          } catch (error) {
+            voiceStatus.textContent = "Erreur: " + error.message;
+          }
         }
-      }
-    });
+      });
+    }
 
     recognition.onresult = function (event) {
       const transcript = event.results[0][0].transcript;
       userInput.value = transcript;
-
-      if (sendBtn) sendBtn.click();
-      resetMicUI();
+      voiceStatus.textContent = "Message prêt à envoyer";
+      voiceStatus.classList.add('voice-active');
+      micBtn.innerHTML = '<i class="bi bi-mic"></i>';
+      micBtn.classList.remove('recording');
     };
 
     recognition.onerror = function (event) {
@@ -71,9 +75,9 @@ document.addEventListener('DOMContentLoaded', function () {
       micBtn.classList.remove('recording');
     }
   } else {
-    micBtn.disabled = true;
+    if (micBtn) micBtn.disabled = true;
     voiceStatus.textContent = "Micro: non supporté";
-    micBtn.title = "Reconnaissance vocale non supportée par votre navigateur";
+    if (micBtn) micBtn.title = "Reconnaissance vocale non supportée par votre navigateur";
   }
 
   // ========== Envoi de message à Flask ==========
@@ -85,32 +89,32 @@ document.addEventListener('DOMContentLoaded', function () {
     chatBox.scrollTop = chatBox.scrollHeight;
   }
 
-  sendBtn.addEventListener('click', function (e) {
-    e.preventDefault();
-    const message = userInput.value.trim();
-    if (!message) return;
+  if (sendBtn) {
+    sendBtn.addEventListener('click', function (e) {
+      e.preventDefault();
+      const message = userInput.value.trim();
+      if (!message) return;
 
-    displayMessage(message, 'user');
-    userInput.value = '';
+      displayMessage(message, 'user');
+      userInput.value = '';
 
-    fetch('/send_message', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({ message: message })
-    })
-      .then(response => response.json())
-      .then(data => {
-        console.log('Réponse API :', data);
-        const botReply = data.reply || "❌ Erreur : réponse vide";
-        displayMessage(botReply, 'bot');
+      fetch('/send_message', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: message })
       })
-      .catch(error => {
-        console.error('Erreur fetch :', error);
-        displayMessage("⚠️ Erreur serveur", 'bot');
-      });
-  });
+        .then(response => response.json())
+        .then(data => {
+          console.log('Réponse API :', data);
+          const botReply = data.reply || "❌ Erreur : réponse vide";
+          displayMessage(botReply, 'bot');
+        })
+        .catch(error => {
+          console.error('Erreur fetch :', error);
+          displayMessage("⚠️ Erreur serveur", 'bot');
+        });
+    });
+  }
 });
 
 // ========== Logo fallback ==========
@@ -125,7 +129,7 @@ function createLogoIfMissing() {
   }
 }
 
-// ========== Timestamp pour messages ==========
+// ========== Timestamp ==========
 function formatTimestamp() {
   const now = new Date();
   const hours = now.getHours().toString().padStart(2, '0');
@@ -133,10 +137,10 @@ function formatTimestamp() {
   return `${hours}:${minutes}`;
 }
 
-// ========== Fonction scroll  ==========
+// ========== Fonction scroll feedback ==========
 function scrollFeedbacks(direction) {
-  const container = document.getElementById('feedbackContainer');
-  const scrollAmount = 320; // Ajuste selon la taille d'une carte
+  const container = document.getElementById('feedbackContainerBottom');
+  const scrollAmount = 320;
   container.scrollBy({
     left: direction * scrollAmount,
     behavior: 'smooth'
