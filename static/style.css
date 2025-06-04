@@ -193,11 +193,8 @@ a:hover {
   color: transparent !important;
 }
 
-.navbar-brand::before {
-  left: -5px;
-  top: 50%;
-  transform: translateY(-50%) scale(0);
-}
+
+
 
 .navbar-brand::after {
   right: -5px;
@@ -3550,4 +3547,27 @@ footer p {
   background-color: #f3e5f5;
   color: #6a1b9a;
   border-color: #ba68c8;
+}
+.flash-success {
+  background-color: #e6ffed;
+  color: #1a7f37;
+  border-left: 5px solid #1a7f37;
+  padding: 12px;
+  border-radius: 8px;
+  margin-bottom: 1rem;
+}
+
+.flash-error {
+  background-color: #ffe6e6;
+  color: #cc0000;
+  border-left: 5px solid #cc0000;
+  padding: 12px;
+  border-radius: 8px;
+  margin-bottom: 1rem;
+}
+.navbar-brand img {
+  height: 30px;
+  width: 30px;
+  object-fit: contain;
+  margin-bottom: 2px;
 }

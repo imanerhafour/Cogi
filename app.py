@@ -1,54 +1,79 @@
-from flask import Flask, render_template, request, redirect, url_for, session, flash, jsonify
+"""
+Flask application for Cogi - Mental Health Companion
+All user‑facing strings have been translated from French to English.
+"""
+
+from flask import (
+    Flask,
+    render_template,
+    request,
+    redirect,
+    url_for,
+    session,
+    flash,
+    jsonify,
+)
 from werkzeug.security import check_password_hash, generate_password_hash
-from flask import session, redirect, url_for
-from datetime import timedelta
-from datetime import datetime
+from datetime import timedelta, datetime, date
 from flask_mail import Mail, Message
 from itsdangerous import URLSafeTimedSerializer, SignatureExpired, BadSignature
 import os
+import re
+import uuid
 import requests
+import psycopg2
 from openai import OpenAI
 from dotenv import load_dotenv
-import re
-import psycopg2
-import uuid
 
-# ------------------- Chargement de la configuration -------------------
+# ----------------------------- Configuration -----------------------------
+
 load_dotenv()
 
 app = Flask(__name__)
-app.secret_key = 'supersecretkey'
+app.secret_key = "supersecretkey"
 app.permanent_session_lifetime = timedelta(minutes=10)
 
-# Config API Together
+# Together AI API
 api_key = os.environ.get("TOGETHER_API_KEY", "").strip()
 if not api_key:
     raise ValueError("TOGETHER_API_KEY is missing")
 client = OpenAI(api_key=api_key, base_url="https://api.together.xyz/v1")
 
-# Config Mail
-app.config['MAIL_SERVER'] = 'sandbox.smtp.mailtrap.io'
-app.config['MAIL_PORT'] = 587
-app.config['MAIL_USE_TLS'] = True
-app.config['MAIL_USERNAME'] = os.environ.get("EMAIL_USER")
-app.config['MAIL_PASSWORD'] = os.environ.get("EMAIL_PASS")
+# Mail configuration (Mailtrap sandbox)
+app.config.update(
+    MAIL_SERVER="sandbox.smtp.mailtrap.io",
+    MAIL_PORT=587,
+    MAIL_USE_TLS=True,
+    MAIL_USERNAME=os.environ.get("EMAIL_USER"),
+    MAIL_PASSWORD=os.environ.get("EMAIL_PASS"),
+)
 mail = Mail(app)
 
 s = URLSafeTimedSerializer(app.secret_key)
 MAX_ATTEMPTS = 5
 
-# ------------------- Fonctions Utilitaires -------------------
+# ----------------------------- Utility Functions -----------------------------
 
-def is_strong_password(password):
-    return re.match(r'^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*(),.?":{}|<>]).{8,}$', password)
+def is_strong_password(password: str) -> bool:
+    """Return True if the password meets minimal complexity requirements."""
+    return bool(
+        re.match(r"^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*(),.?\":{}|<>]).{8,}$", password)
+    )
+
 
 def get_db_connection():
-    return psycopg2.connect(dbname="cogi_db", user="mac", password="cogi123", host="localhost", port="5432")
+    return psycopg2.connect(
+        dbname="cogi_db", user="mac", password="cogi123", host="localhost", port="5432"
+    )
 
-def get_user_by_email(email):
+
+def get_user_by_email(email: str):
     conn = get_db_connection()
     cur = conn.cursor()
-    cur.execute("SELECT email, password, first_name, last_name, confirmed, attempts FROM users WHERE email = %s", (email.lower(),))
+    cur.execute(
+        "SELECT email, password, first_name, last_name, confirmed, attempts FROM users WHERE email = %s",
+        (email.lower(),),
+    )
     result = cur.fetchone()
     cur.close()
     conn.close()
@@ -59,14 +84,18 @@ def get_user_by_email(email):
             "first_name": result[2],
             "last_name": result[3],
             "confirmed": result[4],
-            "attempts": result[5]
+            "attempts": result[5],
         }
     return None
 
-def save_user(data):
+
+def save_user(data: dict) -> bool:
+    """Insert a new user. Returns False if email already exists or on error."""
+
     email = data.get("email", "").lower()
     conn = get_db_connection()
     cur = conn.cursor()
+
     cur.execute("SELECT 1 FROM users WHERE email = %s", (email,))
     if cur.fetchone():
         cur.close()
@@ -74,145 +103,160 @@ def save_user(data):
         return False
 
     try:
-        cur.execute("""
+        cur.execute(
+            """
             INSERT INTO users (email, password, first_name, last_name, gender, dob, confirmed, attempts)
             VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
-        """, (
-            email,
-            generate_password_hash(data.get("password"), method='pbkdf2:sha256'),
-            data.get("first_name"),
-            data.get("last_name"),
-            data.get("gender"),
-            data.get("dob") or None,
-            False,
-            0
-        ))
+            """,
+            (
+                email,
+                generate_password_hash(data.get("password"), method="pbkdf2:sha256"),
+                data.get("first_name"),
+                data.get("last_name"),
+                data.get("gender"),
+                data.get("dob") or None,
+                False,
+                0,
+            ),
+        )
         conn.commit()
         return True
-    except Exception as e:
-        print("❌ Erreur enregistrement utilisateur :", e)
+    except Exception as exc:
+        print("❌ Error saving user:", exc)
         conn.rollback()
         return False
     finally:
         cur.close()
         conn.close()
 
-def save_message(email, message, sender, session_id):
+
+def save_message(email: str, message: str, sender: str, session_id: str) -> None:
     print(f"[DB] Saving message: {sender} | {message} | Session: {session_id}")
     conn = get_db_connection()
     cur = conn.cursor()
-    cur.execute("""
+    cur.execute(
+        """
         INSERT INTO conversations (user_email, message, sender, session_id)
         VALUES (%s, %s, %s, %s)
-    """, (email, message, sender, session_id))
+        """,
+        (email, message, sender, session_id),
+    )
     conn.commit()
     cur.close()
     conn.close()
 
 
-
-def generate_bot_response(user_message):
+def generate_bot_response(user_message: str) -> str:
     try:
         response = client.chat.completions.create(
             model="mistralai/Mistral-7B-Instruct-v0.1",
             messages=[
-                {"role": "system", "content": "You are a helpful mental health assistant."},
+                {"role": "system", "content": "You are a helpful mental‑health assistant."},
                 {"role": "user", "content": user_message},
             ],
             max_tokens=200,
             temperature=0.7,
         )
         return response.choices[0].message.content.strip()
-    except Exception as e:
-        print("Erreur API IA:", e)
-        return "⚠️ Je n'ai pas pu générer de réponse pour le moment."
+    except Exception as exc:
+        print("AI API error:", exc)
+        return "⚠️ I couldn't generate a response right now."
 
+# ----------------------------- Routes -----------------------------
 
-# ------------------- Routes -------------------
-
-@app.route('/')
+@app.route("/")
 def index():
     conn = get_db_connection()
     cur = conn.cursor()
-    cur.execute('SELECT name, message, submitted_at FROM feedback ORDER BY id DESC LIMIT 10')
-    
+    cur.execute("SELECT name, message, submitted_at FROM feedback ORDER BY id DESC LIMIT 10")
     feedbacks = [
-        {"name": row[0], "message": row[1], "submitted_at": row[2]}
-        for row in cur.fetchall()
+        {"name": row[0], "message": row[1], "submitted_at": row[2]} for row in cur.fetchall()
     ]
-
     cur.close()
     conn.close()
-    
     return render_template("index.html", feedbacks=feedbacks)
 
 
-
-
-
-
-@app.route('/chat', methods=['GET', 'POST'])
+@app.route("/chat", methods=["GET", "POST"])
 def chat():
     if "user" not in session:
+        flash("Session expired, please log in again.", "danger")
         return redirect(url_for("login"))
 
     email = session["user"]
     user_data = get_user_by_email(email)
 
+    # Handle session switching / creation
     if request.args.get("session_id"):
         session["session_id"] = request.args.get("session_id")
-
     if request.args.get("new") or "session_id" not in session:
         session["session_id"] = str(uuid.uuid4())
 
     current_session_id = session["session_id"]
 
-    if request.method == 'POST':
-        user_message = request.form.get('message')
+    if request.method == "POST":
+        user_message = request.form.get("message")
         if user_message:
             bot_reply = generate_bot_response(user_message)
-            save_message(email, user_message, 'user', current_session_id)
-            save_message(email, bot_reply, 'bot', current_session_id)
+            save_message(email, user_message, "user", current_session_id)
+            save_message(email, bot_reply, "bot", current_session_id)
 
     conn = get_db_connection()
     cur = conn.cursor()
 
-    cur.execute("""
+    cur.execute(
+        """
         SELECT session_id, MIN(timestamp) AS timestamp
         FROM conversations
         WHERE user_email = %s
         GROUP BY session_id
         ORDER BY timestamp DESC
-    """, (email,))
+        """,
+        (email,),
+    )
     session_rows = cur.fetchall()
 
     sessions = []
-    for sid, timestamp in session_rows:
-        cur.execute("SELECT title FROM conversations WHERE session_id = %s AND title IS NOT NULL ORDER BY timestamp LIMIT 1", (sid,))
-        title_result = cur.fetchone()
-        title = title_result[0] if title_result else None
-        sessions.append({"id": sid, "timestamp": timestamp, "title": title})
+    for sid, ts in session_rows:
+        cur.execute(
+            "SELECT title FROM conversations WHERE session_id = %s AND title IS NOT NULL ORDER BY timestamp LIMIT 1",
+            (sid,),
+        )
+        title_row = cur.fetchone()
+        title = title_row[0] if title_row else None
+        sessions.append({"id": sid, "timestamp": ts, "title": title})
 
-    cur.execute("""
+    cur.execute(
+        """
         SELECT message, sender, timestamp
         FROM conversations
         WHERE user_email = %s AND session_id = %s
         ORDER BY timestamp ASC
-    """, (email, current_session_id))
+        """,
+        (email, current_session_id),
+    )
     history = cur.fetchall()
     cur.close()
     conn.close()
 
-    return render_template("chat.html", username=email, first_name=user_data.get("first_name", ""), last_name=user_data.get("last_name", ""), history=history, sessions=sessions, active_id=current_session_id)
+    return render_template(
+        "chat.html",
+        username=email,
+        first_name=user_data.get("first_name", ""),
+        last_name=user_data.get("last_name", ""),
+        history=history,
+        sessions=sessions,
+        active_id=current_session_id,
+    )
 
 
-@app.route('/login', methods=["GET", "POST"])
+@app.route("/login", methods=["GET", "POST"])
 def login():
     if request.method == "POST":
         username = request.form.get("username")
         password = request.form.get("password")
         if not username or not password:
-            flash('Username and password are required!', 'error')
+            flash("Username and password are required!", "danger")
             return redirect(url_for("login"))
 
         user_data = get_user_by_email(username)
@@ -221,7 +265,7 @@ def login():
             return redirect(url_for("login"))
 
         if not user_data.get("confirmed"):
-            flash("Please confirm your email before logging in.", "error")
+            flash("Please confirm your email before logging in.", "danger")
             return redirect(url_for("login"))
 
         if user_data["attempts"] >= MAX_ATTEMPTS:
@@ -238,6 +282,7 @@ def login():
             flash("Incorrect username or password.", "error")
             return redirect(url_for("login"))
 
+        # Reset attempt counter
         conn = get_db_connection()
         cur = conn.cursor()
         cur.execute("UPDATE users SET attempts = 0 WHERE email = %s", (username,))
@@ -251,36 +296,42 @@ def login():
 
     return render_template("login.html")
 
-from datetime import date
 
-@app.route('/register', methods=["GET", "POST"])
+@app.route("/register", methods=["GET", "POST"])
 def register():
     if request.method == "POST":
-        form_data = {
-            key: request.form.get(key)
-            for key in ["first_name", "last_name", "email", "password", "gender", "dob"]
-        }
-        recaptcha_response = request.form.get('g-recaptcha-response')
+        # Collect form data
+        form_data = {k: request.form.get(k) for k in [
+            "first_name",
+            "last_name",
+            "email",
+            "password",
+            "gender",
+            "dob",
+        ]}
+        recaptcha_response = request.form.get("g-recaptcha-response")
 
-        # Check for missing fields
         if not all(form_data.values()) or not recaptcha_response:
-            flash("Veuillez remplir tous les champs et valider le CAPTCHA.", "error")
+            flash("Please fill in all fields and complete the CAPTCHA verification.", "error")
             return redirect(url_for("register"))
 
-        # CAPTCHA validation
-        secret_key = os.environ.get("RECAPTCHA_SECRET")
-        payload = {'secret': secret_key, 'response': recaptcha_response}
-        captcha_check = requests.post("https://www.google.com/recaptcha/api/siteverify", data=payload).json()
-        if not captcha_check.get('success'):
-            flash("Échec de la vérification CAPTCHA.", "error")
+        # CAPTCHA verification
+        captcha_payload = {
+            "secret": os.environ.get("RECAPTCHA_SECRET"),
+            "response": recaptcha_response,
+        }
+        captcha_ok = requests.post(
+            "https://www.google.com/recaptcha/api/siteverify", data=captcha_payload
+        ).json()
+        if not captcha_ok.get("success"):
+            flash("CAPTCHA verification failed.", "error")
             return redirect(url_for("register"))
 
-        # Date of birth validation
+        # DOB validation
         try:
             dob = date.fromisoformat(form_data["dob"])
             today = date.today()
             age = today.year - dob.year - ((today.month, today.day) < (dob.month, dob.day))
-
             if dob > today:
                 flash("Date of birth cannot be in the future.", "error")
                 return redirect(url_for("register"))
@@ -294,41 +345,41 @@ def register():
             flash("Invalid date format for date of birth.", "error")
             return redirect(url_for("register"))
 
-        # Password strength check
+        # Password strength
         if not is_strong_password(form_data["password"]):
-            flash("Mot de passe trop faible.", "error")
+            flash("Password is too weak.", "error")
             return redirect(url_for("register"))
 
         # Save user
         if not save_user(form_data):
-            flash("Cet email est déjà enregistré.", "error")
+            flash("This email is already registered.", "error")
             return redirect(url_for("register"))
 
-        # Email confirmation
-        token = s.dumps(form_data["email"], salt='email-confirm')
-        link = url_for('confirm_email', token=token, _external=True)
+        # Send confirmation e‑mail
+        token = s.dumps(form_data["email"], salt="email-confirm")
+        link = url_for("confirm_email", token=token, _external=True)
 
         msg = Message(
-            "Confirme ton adresse email",
-            sender=app.config['MAIL_USERNAME'],
-            recipients=[form_data["email"]]
+            "Confirm your email address",
+            sender=app.config["MAIL_USERNAME"],
+            recipients=[form_data["email"]],
         )
-        msg.body = f"Bienvenue sur Cogi ! Clique ici pour confirmer ton adresse : {link}"
+        msg.body = f"Welcome to Cogi! Click here to confirm your address: {link}"
         mail.send(msg)
 
-        flash("Inscription réussie ! Vérifie ton email pour activer ton compte.", "success")
+        flash("Registration successful! Please check your email to activate your account.", "success")
         return redirect(url_for("login"))
 
-    # GET method: show form with current date
+    # GET
     return render_template("register.html", current_date=date.today())
 
 
-@app.route('/confirm/<token>')
+@app.route("/confirm/<token>")
 def confirm_email(token):
     try:
-        email = s.loads(token, salt='email-confirm', max_age=3600)
+        email = s.loads(token, salt="email-confirm", max_age=3600)
     except (SignatureExpired, BadSignature):
-        flash("Lien invalide ou expiré.", "danger")
+        flash("Invalid or expired link.", "danger")
         return redirect(url_for("register"))
 
     conn = get_db_connection()
@@ -338,34 +389,37 @@ def confirm_email(token):
     cur.close()
     conn.close()
 
-    flash("Email confirmé. Tu peux te connecter.", "success")
+    flash("Email confirmed. You can now log in.", "success")
     return redirect(url_for("login"))
 
-@app.route('/reset_request', methods=["POST"])
+
+@app.route("/reset_request", methods=["POST"])
 def reset_request():
     email = request.form.get("email")
     user = get_user_by_email(email)
     if not user:
-        return jsonify({"status": "error", "message": "Aucun compte associé à cet email."}), 404
+        return jsonify({"status": "error", "message": "No account associated with this email."}), 404
 
-    token = s.dumps(email, salt='reset-password')
+    token = s.dumps(email, salt="reset-password")
     reset_link = url_for("reset_token", token=token, _external=True)
 
-    msg = Message("Réinitialisation du mot de passe", sender=app.config['MAIL_USERNAME'], recipients=[email])
-    msg.body = f"Clique ici pour réinitialiser ton mot de passe : {reset_link}"
+    msg = Message("Password reset", sender=app.config["MAIL_USERNAME"], recipients=[email])
+    msg.body = f"Click here to reset your password: {reset_link}"
+
     try:
         mail.send(msg)
-        return jsonify({"status": "success", "message": "Lien envoyé à ton adresse email."})
-    except Exception as e:
-        print("Erreur envoi email :", e)
-        return jsonify({"status": "error", "message": "Erreur lors de l'envoi de l'email."}), 500
+        return jsonify({"status": "success", "message": "Link sent to your email address."})
+    except Exception as exc:
+        print("Error sending email:", exc)
+        return jsonify({"status": "error", "message": "Error sending email."}), 500
 
-@app.route('/reset/<token>', methods=["GET", "POST"])
+
+@app.route("/reset/<token>", methods=["GET", "POST"])
 def reset_token(token):
     try:
-        email = s.loads(token, salt='reset-password', max_age=3600)
+        email = s.loads(token, salt="reset-password", max_age=3600)
     except (SignatureExpired, BadSignature):
-        flash("Lien invalide ou expiré.", "danger")
+        flash("Invalid or expired link.", "danger")
         return redirect(url_for("login"))
 
     if request.method == "POST":
@@ -373,27 +427,28 @@ def reset_token(token):
         confirm = request.form.get("confirm")
 
         if password != confirm:
-            flash("Les mots de passe ne correspondent pas.", "error")
+            flash("Passwords do not match.", "error")
             return render_template("reset_token.html", token=token)
 
         if not is_strong_password(password):
-            flash("Mot de passe trop faible.", "error")
+            flash("Password is too weak.", "error")
             return render_template("reset_token.html", token=token)
 
         conn = get_db_connection()
         cur = conn.cursor()
-        cur.execute("UPDATE users SET password = %s WHERE email = %s", (
-            generate_password_hash(password, method='pbkdf2:sha256'),
-            email
-        ))
+        cur.execute(
+            "UPDATE users SET password = %s WHERE email = %s",
+            (generate_password_hash(password, method="pbkdf2:sha256"), email),
+        )
         conn.commit()
         cur.close()
         conn.close()
 
-        flash("Mot de passe réinitialisé. Tu peux te connecter.", "success")
+        flash("Password reset successful. You can now log in.", "success")
         return redirect(url_for("login"))
 
     return render_template("reset_token.html", token=token)
+
 
 @app.route("/send_message", methods=["POST"])
 def send_message():
@@ -403,15 +458,14 @@ def send_message():
     user_input = request.json.get("message", "")
     session_id = session.get("session_id")
 
-    if not user_input:
-        return jsonify({"reply": "❌ Message vide"}), 400
+    if not user_input.strip():
+        return jsonify({"reply": "❌ Empty message"}), 400
 
     try:
-        # IA response
         response = client.chat.completions.create(
             model="mistralai/Mistral-7B-Instruct-v0.1",
             messages=[
-                {"role": "system", "content": "You are a helpful mental health assistant."},
+                {"role": "system", "content": "You are a helpful mental‑health assistant."},
                 {"role": "user", "content": user_input},
             ],
             max_tokens=200,
@@ -419,17 +473,16 @@ def send_message():
         )
         reply = response.choices[0].message.content.strip()
 
-        # 🔒 Sauvegarde DB
-        save_message(session["user"], user_input, 'user', session_id)
-        save_message(session["user"], reply, 'bot', session_id)
+        save_message(session["user"], user_input, "user", session_id)
+        save_message(session["user"], reply, "bot", session_id)
 
         return jsonify({"reply": reply})
-    except Exception as e:
-        print("Erreur serveur:", e)
-        return jsonify({"reply": f"⚠️ Erreur serveur : {e}"}), 500
+    except Exception as exc:
+        print("Server error:", exc)
+        return jsonify({"reply": f"⚠️ Server error: {exc}"}), 500
 
 
-@app.route('/feedback', methods=["GET", "POST"])
+@app.route("/feedback", methods=["GET", "POST"])
 def feedback():
     if "user" not in session:
         flash("You must be logged in to send feedback.", "warning")
@@ -447,38 +500,34 @@ def feedback():
             return redirect(url_for("index"))
 
         try:
-            cur.execute(
-                "INSERT INTO feedback (name, message) VALUES (%s, %s)",
-                (name, message)
-            )
+            cur.execute("INSERT INTO feedback (name, message) VALUES (%s, %s)", (name, message))
             conn.commit()
             flash("✅ Feedback sent successfully!", "success")
-        except Exception as e:
+        except Exception as exc:
             conn.rollback()
-            flash(f"Error submitting feedback: {e}", "error")
+            flash(f"Error submitting feedback: {exc}", "error")
 
         cur.close()
         conn.close()
         return redirect(url_for("index"))
 
-    else:  # GET method — afficher tous les feedbacks
-        cur.execute("SELECT name, message, submitted_at FROM feedback ORDER BY submitted_at DESC")
-        feedbacks = cur.fetchall()
-        cur.close()
-        conn.close()
-        return render_template("feedback.html", feedbacks=[
-            {"name": row[0], "message": row[1], "submitted_at": row[2]} for row in feedbacks
-        ])
+    # GET – list feedback
+    cur.execute("SELECT name, message, submitted_at FROM feedback ORDER BY submitted_at DESC")
+    feedbacks = cur.fetchall()
+    cur.close()
+    conn.close()
+    return render_template(
+        "feedback.html",
+        feedbacks=[{"name": r[0], "message": r[1], "submitted_at": r[2]} for r in feedbacks],
+    )
 
 
-
-@app.route('/rename_chat', methods=["POST"])
+@app.route("/rename_chat", methods=["POST"])
 def rename_chat():
     chat_id = request.form.get("chat_id")
     new_title = request.form.get("new_title", "").strip()
- 
     if not new_title:
-        flash("Le titre ne peut pas être vide.", "warning")
+        flash("Title cannot be empty.", "warning")
         return redirect(url_for("chat", session_id=chat_id))
 
     conn = get_db_connection()
@@ -492,11 +541,11 @@ def rename_chat():
     return redirect(url_for("chat", session_id=chat_id))
 
 
-@app.route('/delete_chat', methods=["POST"])
+@app.route("/delete_chat", methods=["POST"])
 def delete_chat():
     chat_id = request.form.get("chat_id")
     if not chat_id:
-        flash("Invalid delete request", "danger")
+        flash("Invalid delete request.", "danger")
         return redirect(url_for("chat"))
 
     conn = get_db_connection()
@@ -504,80 +553,85 @@ def delete_chat():
     try:
         cur.execute("DELETE FROM conversations WHERE session_id = %s", (chat_id,))
         conn.commit()
-    except Exception as e:
-        flash(f"Delete failed: {e}", "danger")
+    except Exception as exc:
+        flash(f"Delete failed: {exc}", "danger")
     finally:
         cur.close()
         conn.close()
     return redirect(url_for("chat"))
 
 
+# ----------------------------- Context / Filters -----------------------------
 
 @app.context_processor
 def inject_user_info():
-    if 'user' in session:
-        email = session['user']
-        user_data = get_user_by_email(email)
+    if "user" in session:
+        user_data = get_user_by_email(session["user"])
         if user_data:
             return {
-                'first_name': user_data.get('first_name', ''),
-                'last_name': user_data.get('last_name', '')
+                "first_name": user_data.get("first_name", ""),
+                "last_name": user_data.get("last_name", ""),
             }
-    return {'first_name': '', 'last_name': ''}
+    return {"first_name": "", "last_name": ""}
 
-@app.route('/logout')
-def logout():
-    session.clear()
-    return redirect(url_for('index'))
+
+# ----------------------------- Session Management -----------------------------
 
 @app.before_request
 def check_session_timeout():
-    if 'user' in session:
+    if "user" in session:
         session.modified = True
         now = datetime.utcnow()
         last_activity = session.get("last_activity")
-
         if last_activity:
             elapsed = now - datetime.fromisoformat(last_activity)
             if elapsed > app.permanent_session_lifetime:
                 print("[DEBUG] Session expired")
                 flash("Session expired due to inactivity.", "warning")
                 session.clear()
-                print("[DEBUG] Redirection vers login après expiration")
-
+                print("[DEBUG] Redirecting to login after expiration")
                 return redirect(url_for("login"))
-
         session["last_activity"] = now.isoformat()
 
 
+# ----------------------------- Miscellaneous -----------------------------
 
-
-@app.route('/mission')
+@app.route("/mission")
 def mission():
-    return render_template('mission.html')
+    return render_template("mission.html")
+
 
 @app.route("/subscribe", methods=["POST"])
 def subscribe():
     email = request.form.get("email", "").strip().lower()
-
     if not email or "@" not in email:
-        flash("Invalid email address", "danger")
+        flash("Invalid email address.", "danger")
         return redirect(url_for("index"))
 
     try:
         conn = get_db_connection()
         cur = conn.cursor()
-        cur.execute("INSERT INTO subscriber (email) VALUES (%s) ON CONFLICT DO NOTHING", (email,))
+        cur.execute(
+            "INSERT INTO subscriber (email) VALUES (%s) ON CONFLICT DO NOTHING",
+            (email,),
+        )
         conn.commit()
         flash("Thanks for subscribing!", "success")
-    except Exception as e:
-        print("❌ Error saving subscription:", e)
+    except Exception as exc:
+        print("❌ Error saving subscription:", exc)
         flash("Something went wrong. Please try again.", "danger")
     finally:
         cur.close()
         conn.close()
 
     return redirect(url_for("index"))
+
+
+@app.route("/logout")
+def logout():
+    session.clear()
+    return redirect(url_for("index"))
+
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000, debug=True)
