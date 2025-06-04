@@ -100,11 +100,15 @@
   <!-- ======================================================================== -->
 
   <!-- =============================== FOOTER ================================ -->
-  <footer class="bg-dark text-white text-center py-3 mt-auto">
+  {% if not hide_footer %}
+  <footer class="footer-custom bg-dark text-white mt-auto">
     <div class="container">
-      <p class="m-0">&copy; 2025 Cogi - Your Mental Health Companion</p>
+      <p class="copyright">&copy; 2025 Cogi - Your Mental Health Companion</p>
     </div>
   </footer>
+  {% endif %}
+
+  
   <!-- ======================================================================== -->
 
   <!-- =============================== SCRIPTS =============================== -->

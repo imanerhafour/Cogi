@@ -605,9 +605,9 @@ a:hover {
 .features {
   display: flex;
   justify-content: center;
-  flex-wrap: wrap;
-  margin: 60px 0;
+  align-items: stretch; /* ⬅️ Aligne toutes les cartes à la même hauteur */
   gap: 30px;
+  flex-wrap: wrap;
 }
 
 /* Make sure features display correctly on mobile */
@@ -621,8 +621,10 @@ a:hover {
   }
   
   .feature {
-    width: 100%;
-    max-width: 350px;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
   }
 }
 /* Chat Page Specific Styles */
@@ -1060,10 +1062,7 @@ a:hover {
 }
 
 .feature p {
-  color: var(--text-medium);
-  font-size: 1.05rem;
-  margin-bottom: 25px;
-  line-height: 1.7;
+  flex-grow: 1;
 }
 
 .feature i {
@@ -1976,7 +1975,6 @@ footer {
   text-align: center;
 }
 
-}
 
 footer::before {
   content: '';
@@ -2223,9 +2221,8 @@ footer p {
     font-size: 3rem;
   }
   
-  .feature h3,
-  .card-title {
-    font-size: 1.3rem;
+  .feature h3 {
+    min-height: 3rem; /* ou selon ta taille de police */
   }
   
   .feature p,
@@ -3579,3 +3576,26 @@ footer p {
   object-fit: contain;
   margin-bottom: 2px;
 }
+
+.footer-custom {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-direction: column;
+  padding: 40px 0;
+  background-color: #1f2227;
+  border-top: 2px solid var(--harmony-purple);
+}
+
+.footer-custom .copyright {
+  color: var(--text-medium);
+  font-size: 1.05rem;
+  margin: 0 auto;
+  text-align: center;
+}
+
+
+body.no-footer footer {
+  display: none !important;
+}
+
