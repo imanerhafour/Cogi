@@ -1968,6 +1968,14 @@ footer {
   position: relative;
   overflow: hidden;
   border-top: 1px solid rgba(157, 148, 255, 0.1);
+
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-direction: column;
+  text-align: center;
+}
+
 }
 
 footer::before {
